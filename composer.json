@@ -1,0 +1,61 @@
+{
+    "name": "builtnoble/duration-fieldtype",
+    "autoload": {
+        "psr-4": {
+            "Builtnoble\\DurationFieldtype\\": "src"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Builtnoble\\DurationFieldtype\\Tests\\": "tests",
+            "Workbench\\App\\": "workbench/app/",
+            "Workbench\\Database\\Factories\\": "workbench/database/factories/",
+            "Workbench\\Database\\Seeders\\": "workbench/database/seeders/"
+        }
+    },
+    "require": {
+        "statamic/cms": "^6.0"
+    },
+    "require-dev": {
+        "orchestra/testbench": "^10.8",
+        "pestphp/pest": "^4.6",
+        "laravel/boost": "^2.4"
+    },
+    "config": {
+        "allow-plugins": {
+            "pixelfear/composer-dist-plugin": true,
+            "pestphp/pest-plugin": true
+        }
+    },
+    "extra": {
+        "statamic": {
+            "name": "Duration Fieldtype",
+            "description": "Duration Fieldtype addon"
+        },
+        "laravel": {
+            "providers": [
+                "Builtnoble\\DurationFieldtype\\ServiceProvider"
+            ]
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "scripts": {
+        "post-autoload-dump": [
+            "@clear",
+            "@prepare"
+        ],
+        "clear": "@php vendor/bin/testbench package:purge-skeleton --ansi",
+        "prepare": "@php vendor/bin/testbench package:discover --ansi",
+        "build": "@php vendor/bin/testbench workbench:build --ansi",
+        "serve": [
+            "Composer\\Config::disableProcessTimeout",
+            "@build",
+            "@php vendor/bin/testbench serve --ansi"
+        ],
+        "test": [
+            "@clear",
+            "@php vendor/bin/pest"
+        ]
+    }
+}
