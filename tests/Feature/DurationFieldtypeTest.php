@@ -59,20 +59,18 @@ describe('process method: transforms hh:mm input into milliseconds', function ()
 });
 
 describe('augment method: transforms stored milliseconds for Antlers template output', function () {
-    it('omits minutes when minutes is zero', function () {
-        expect($this->fieldtype->augment(null))->toBe('00 hrs')
-            ->and($this->fieldtype->augment(3_600_000))->toBe('01 hr');
+    it('shows only mins when hours is zero', function () {
+        expect($this->fieldtype->augment(null))->toBe('00 mins')
+            ->and($this->fieldtype->augment(60_000))->toBe('01 min');
     });
 
-    it('uses singular hr when hours is 1', function () {
-        expect($this->fieldtype->augment(5_400_000))->toBe('01 hr 30 mins');
+    it('shows only hrs when minutes is zero', function () {
+        expect($this->fieldtype->augment(3_600_000))->toBe('01 hr')
+            ->and($this->fieldtype->augment(7_200_000))->toBe('02 hrs');
     });
 
-    it('uses singular min when minutes is 1', function () {
-        expect($this->fieldtype->augment(60_000))->toBe('00 hrs 01 min');
-    });
-
-    it('uses plural hrs and mins for values greater than 1', function () {
-        expect($this->fieldtype->augment(7_320_000))->toBe('02 hrs 02 mins');
+    it('shows both hrs and mins when both are non-zero', function () {
+        expect($this->fieldtype->augment(5_400_000))->toBe('01 hr 30 mins')
+            ->and($this->fieldtype->augment(7_260_000))->toBe('02 hrs 01 min');
     });
 });

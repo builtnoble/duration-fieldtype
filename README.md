@@ -28,15 +28,15 @@ Then add the fieldtype to any blueprint in the Control Panel or directly in `res
 This fieldtype uses the standard Statamic fieldtype lifecycle and maps each method to a specific responsibility:
 
 - **`preload()`**
-    - provides metadata to the Vue component (currently the `maxHours` cap)
+  - provides metadata to the Vue component (currently the `maxHours` cap)
 - **`preProcess($value)`**
-    - converts stored milliseconds to a zero-padded `hh:mm` string for the CP edit form
+  - converts stored milliseconds to a zero-padded `hh:mm` string for the CP edit form
 - **`process($value)`**
-    - parses the masked `hh:mm` or canonical `hhmm` digit input from the Vue component and converts it to an integer number of milliseconds for storage
+  - parses the masked `hh:mm` or canonical `hhmm` digit input from the Vue component and converts it to an integer number of milliseconds for storage
 - **`preProcessIndex($value)`**
-    - converts stored milliseconds to `hh:mm` for display in Control Panel index listings
+  - converts stored milliseconds to `hh:mm` for display in Control Panel index listings
 - **`augment($value)`**
-    - converts stored milliseconds to a human-readable string for Antlers template output
+  - converts stored milliseconds to a human-readable string for Antlers template output
 
 ### Storage
 
@@ -49,14 +49,16 @@ When a stored value is augmented for use in Antlers templates, it is formatted a
 ```antlers
 {{ duration }}
 {{# Examples:
+    0        → 00 mins
+    60000    → 01 min
     5400000  → 01 hr 30 mins
     3600000  → 01 hr
-    90000    → 00 hrs 01 min
+    7200000  → 02 hrs
     7320000  → 02 hrs 02 mins
 #}}
 ```
 
-The minutes segment is omitted when minutes is zero.
+Both segments follow singular/plural rules independently. When hours is zero only the minutes segment is shown; when minutes is zero only the hours segment is shown.
 
 ### Input masking
 

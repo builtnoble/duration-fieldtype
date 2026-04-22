@@ -62,13 +62,17 @@ class Duration extends Fieldtype
     {
         [$hours, $minutes] = $this->toHourMinuteParts($value);
 
+        $minuteLabel = $minutes === 1 ? 'min' : 'mins';
+
+        if ($hours === 0) {
+            return sprintf('%02d %s', $minutes, $minuteLabel);
+        }
+
         $hourLabel = $hours === 1 ? 'hr' : 'hrs';
 
         if ($minutes === 0) {
             return sprintf('%02d %s', $hours, $hourLabel);
         }
-
-        $minuteLabel = $minutes === 1 ? 'min' : 'mins';
 
         return sprintf('%02d %s %02d %s', $hours, $hourLabel, $minutes, $minuteLabel);
     }
