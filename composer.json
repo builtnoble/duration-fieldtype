@@ -1,5 +1,11 @@
 {
     "name": "builtnoble/duration-fieldtype",
+    "authors": [
+        {
+            "name": "Amanda Romero",
+            "email": "thetypescriptslayer@gmail.com"
+        }
+    ],
     "autoload": {
         "psr-4": {
             "Builtnoble\\DurationFieldtype\\": "src"
@@ -7,10 +13,7 @@
     },
     "autoload-dev": {
         "psr-4": {
-            "Builtnoble\\DurationFieldtype\\Tests\\": "tests",
-            "Workbench\\App\\": "workbench/app/",
-            "Workbench\\Database\\Factories\\": "workbench/database/factories/",
-            "Workbench\\Database\\Seeders\\": "workbench/database/seeders/"
+            "Builtnoble\\DurationFieldtype\\Tests\\": "tests"
         }
     },
     "require": {
@@ -18,8 +21,11 @@
     },
     "require-dev": {
         "orchestra/testbench": "^10.8",
-        "pestphp/pest": "^4.6",
-        "laravel/boost": "^2.4"
+        "pestphp/pest": "^4.6"
+    },
+    "scripts": {
+        "test": "pest",
+        "test:feature": "pest --group=\"feature\""
     },
     "config": {
         "allow-plugins": {
@@ -30,7 +36,8 @@
     "extra": {
         "statamic": {
             "name": "Duration Fieldtype",
-            "description": "Duration Fieldtype addon"
+            "description": "Duration Fieldtype addon",
+            "editions": ["free"]
         },
         "laravel": {
             "providers": [
@@ -39,23 +46,5 @@
         }
     },
     "minimum-stability": "dev",
-    "prefer-stable": true,
-    "scripts": {
-        "post-autoload-dump": [
-            "@clear",
-            "@prepare"
-        ],
-        "clear": "@php vendor/bin/testbench package:purge-skeleton --ansi",
-        "prepare": "@php vendor/bin/testbench package:discover --ansi",
-        "build": "@php vendor/bin/testbench workbench:build --ansi",
-        "serve": [
-            "Composer\\Config::disableProcessTimeout",
-            "@build",
-            "@php vendor/bin/testbench serve --ansi"
-        ],
-        "test": [
-            "@clear",
-            "@php vendor/bin/pest"
-        ]
-    }
+    "prefer-stable": true
 }
