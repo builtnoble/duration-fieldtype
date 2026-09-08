@@ -6,7 +6,7 @@
 
 - **Millisecond integer storage** — values are saved as raw integers (e.g. `5400000` for 1 hour 30 minutes), keeping arithmetic and sorting predictable
 - **Masked `hh:mm` input** — the Control Panel field renders a masked input that automatically formats digits as hours and minutes, capped at `99:59`
-- **Keyboard stepping** — pressing `↑` or `↓` while the field is focused increments or decrements whichever segment (hours or minutes) the cursor is in
+- **Keyboard stepping** — pressing `↑` or `↓` while the field is focused increments or decrements whichever single digit the cursor is touching
 - **Truncation to minute** — partial minutes are discarded on load; sub-minute precision is not stored or displayed
 - **Antlers ready** — augmented values are returned as a human-readable string (e.g. `01 hr 30 mins`) with singular and plural labels, and the minutes segment is omitted entirely when zero
 - **Null-safe** — null values display as `00:00` in the CP and `00 mins` in templates
@@ -66,21 +66,13 @@ The CP field renders a masked text input using [Maska](https://beholdr.github.io
 
 ### Keyboard stepping
 
-With focus inside the duration field, the `↑` and `↓` arrow keys increment or decrement whichever segment the cursor is currently in.
+With focus inside the duration field, the `↑` and `↓` arrow keys increment or decrement whichever single digit the cursor is touching (hours tens, hours ones, minutes tens, or minutes ones), independently of the other digit in that pair. A caret sitting just before or just after a digit both target that same digit.
 
-Cursor in the minutes segment (carries into hours, like a clock):
-
-- `02:59` → ↑ → `03:00`
-- `03:00` → ↓ → `02:59`
-- `99:59` → ↑ → `99:59` (capped)
-- `00:00` → ↓ → `00:00` (floored)
-
-Cursor in the hours segment (only the hours change):
-
-- `02:59` → ↑ → `03:59`
-- `03:59` → ↓ → `02:59`
-- `99:59` → ↑ → `99:59` (capped)
-- `00:30` → ↓ → `00:30` (floored)
+- `02:59` → caret on the first digit → ↑ → `12:59` (only the hours tens digit changes)
+- `12:59` → caret on the second digit → ↑ → `13:59` (only the hours ones digit changes)
+- `00:55` → caret on the third digit → ↑ → `00:59` (capped at the field maximum rather than rolling over to `00:65`)
+- `99:00` → caret on the first digit → ↑ → `99:00` (capped; a digit never wraps past the field maximum)
+- `00:00` → caret on any digit → ↓ → `00:00` (floored; a digit never wraps below zero)
 
 ### Value bounds
 

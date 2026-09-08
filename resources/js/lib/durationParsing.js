@@ -68,53 +68,60 @@ export const formatHourMinute = ({ hours, minutes }) => {
 };
 
 /**
- * Determine which duration segment a caret position falls within for a
- * formatted "hh:mm" display value, so arrow-key stepping can act on whichever
- * segment the cursor is in rather than always stepping minutes.
+ * Determine which single digit (by character index into a formatted "hh:mm"
+ * display value) a caret position should step, so arrow-key stepping can act
+ * on exactly the digit the cursor is touching.
+ *
+ * Prefers the digit immediately to the left of the caret, falling back to the
+ * digit immediately to the right when there isn't one on the left (the very
+ * start of the string, or just after the ":" separator). This means a caret
+ * sitting before or after a given digit both target that same digit.
  *
  * @param {string} value
  * @param {number} caret
  *
- * @returns {'hours' | 'minutes'}
+ * @returns {number | null} a character index into `value` (0, 1, 3, or 4), or null if neither side is a digit
  */
-export const resolveDurationSegment = (value, caret) => {
-    const separatorIndex = value.indexOf(':');
+export const resolveDurationDigit = (value, caret) => {
+    const isDigit = (char) => char !== undefined && /\d/.test(char);
 
-    if (separatorIndex === -1) {
-        return 'minutes';
+    if (isDigit(value[caret - 1])) {
+        return caret - 1;
     }
 
-    return caret <= separatorIndex ? 'hours' : 'minutes';
+    if (isDigit(value[caret])) {
+        return caret;
+    }
+
+    return null;
 };
 
 /**
- * Step a duration by one unit in the given segment.
+ * Step a single digit (identified by its character index into a formatted
+ * "hh:mm" value) by one unit, independently of the other digit in its field.
  *
- * Stepping hours only ever changes the hours part, clamped independently to
- * `maxHours`. Stepping minutes carries overflow/underflow into hours (like a
- * clock), clamped to the field's combined maximum duration.
+ * The digit clamps at 0 and 9 rather than carrying into, or wrapping from,
+ * the other digit in its field. The resulting hours/minutes value is then
+ * clamped to the field's bounds, since a tens digit can otherwise land the
+ * field outside its valid range (e.g. minutes' tens digit going from 5 to 6).
  *
  * @param {{ hours: number, minutes: number }} parts
- * @param {'hours' | 'minutes'} segment
+ * @param {number} digitIndex 0 (hours tens), 1 (hours ones), 3 (minutes tens), or 4 (minutes ones)
  * @param {1 | -1} direction
  * @param {{ maxHours: number, maxMinutes: number }} bounds
  *
  * @returns {{ hours: number, minutes: number }}
  */
-export const stepDuration = (parts, segment, direction, { maxHours, maxMinutes }) => {
-    if (segment === 'hours') {
-        return {
-            hours: Math.min(Math.max(parts.hours + direction, 0), maxHours),
-            minutes: parts.minutes,
-        };
-    }
+export const stepDurationDigit = (parts, digitIndex, direction, { maxHours, maxMinutes }) => {
+    const isHours = digitIndex === 0 || digitIndex === 1;
+    const place = digitIndex === 0 || digitIndex === 3 ? 10 : 1;
+    const fieldValue = isHours ? parts.hours : parts.minutes;
+    const maxForField = isHours ? maxHours : maxMinutes;
 
-    const maxTotalMinutes = maxHours * 60 + maxMinutes;
-    const currentTotalMinutes = parts.hours * 60 + parts.minutes;
-    const totalMinutes = Math.min(Math.max(currentTotalMinutes + direction, 0), maxTotalMinutes);
+    const currentDigit = Math.floor(fieldValue / place) % 10;
+    const newDigit = direction > 0 ? Math.min(currentDigit + 1, 9) : Math.max(currentDigit - 1, 0);
+    const steppedValue = fieldValue - currentDigit * place + newDigit * place;
+    const clampedValue = Math.min(steppedValue, maxForField);
 
-    return {
-        hours: Math.floor(totalMinutes / 60),
-        minutes: totalMinutes % 60,
-    };
+    return isHours ? { hours: clampedValue, minutes: parts.minutes } : { hours: parts.hours, minutes: clampedValue };
 };
