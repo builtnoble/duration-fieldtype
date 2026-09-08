@@ -47,9 +47,7 @@
             "editions": ["free"]
         },
         "laravel": {
-            "providers": [
-                "Builtnoble\\DurationFieldtype\\ServiceProvider"
-            ]
+            "providers": ["Builtnoble\\DurationFieldtype\\ServiceProvider"]
         }
     },
     "minimum-stability": "dev",

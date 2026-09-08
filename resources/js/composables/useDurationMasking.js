@@ -1,4 +1,4 @@
-import { reactive } from "vue";
+import { reactive } from 'vue';
 
 const MAX_HOURS = 99;
 const MAX_MINUTES = 59;
@@ -92,9 +92,10 @@ export const useDurationMasking = (_meta = {}, { onUnmaskedValue } = {}) => {
         const normalized = normalizeToHourMinute(event.target?.value ?? '');
         const currentTotalMinutes = normalized.hours * 60 + normalized.minutes;
 
-        const newTotalMinutes = event.key === 'ArrowUp'
-            ? Math.min(currentTotalMinutes + 1, MAX_TOTAL_MINUTES)
-            : Math.max(currentTotalMinutes - 1, 0);
+        const newTotalMinutes =
+            event.key === 'ArrowUp'
+                ? Math.min(currentTotalMinutes + 1, MAX_TOTAL_MINUTES)
+                : Math.max(currentTotalMinutes - 1, 0);
 
         const newHours = Math.floor(newTotalMinutes / 60);
         const newMinutes = newTotalMinutes % 60;
