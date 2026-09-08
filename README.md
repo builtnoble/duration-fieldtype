@@ -9,7 +9,7 @@
 - **Keyboard stepping** — pressing `↑` or `↓` while the field is focused increments or decrements the duration by one minute
 - **Truncation to minute** — partial minutes are discarded on load; sub-minute precision is not stored or displayed
 - **Antlers ready** — augmented values are returned as a human-readable string (e.g. `01 hr 30 mins`) with singular and plural labels, and the minutes segment is omitted entirely when zero
-- **Null-safe** — null values display as `00:00` in the CP and `00 hrs` in templates
+- **Null-safe** — null values display as `00:00` in the CP and `00 mins` in templates
 
 ## How to Install
 
@@ -83,7 +83,7 @@ With focus inside the duration field, the `↑` and `↓` arrow keys increment o
 
 ### Null and empty handling
 
-Both `preProcess` and `preProcessIndex` handle `null` defensively by returning `00:00`. `augment` returns `00 hrs` for null or zero values so templates always receive a non-empty string.
+Both `preProcess` and `preProcessIndex` handle `null` defensively by returning `00:00`. `augment` returns `00 mins` for null or zero values so templates always receive a non-empty string.
 
 ## Running Tests
 
