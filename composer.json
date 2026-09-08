@@ -1,5 +1,8 @@
 {
     "name": "builtnoble/duration-fieldtype",
+    "description": "A Statamic fieldtype for storing and displaying time durations as millisecond-precision integers, entered via a masked hh:mm input.",
+    "keywords": ["statamic", "statamic-addon", "fieldtype", "duration", "time"],
+    "license": "MIT",
     "authors": [
         {
             "name": "Amanda Romero",
@@ -34,6 +37,10 @@
         "analyse": "phpstan analyse",
         "check": ["@lint", "@analyse", "@test"]
     },
+    "support": {
+        "issues": "https://github.com/builtnoble/duration-fieldtype/issues",
+        "source": "https://github.com/builtnoble/duration-fieldtype"
+    },
     "config": {
         "allow-plugins": {
             "pixelfear/composer-dist-plugin": true,
@@ -43,7 +50,7 @@
     "extra": {
         "statamic": {
             "name": "Duration Fieldtype",
-            "description": "Duration Fieldtype addon",
+            "description": "A Statamic fieldtype for storing and displaying time durations as millisecond-precision integers, entered via a masked hh:mm input.",
             "editions": ["free"]
         },
         "laravel": {
