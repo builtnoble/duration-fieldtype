@@ -70,9 +70,9 @@ With focus inside the duration field, the `↑` and `↓` arrow keys increment o
 
 - `02:59` → caret right after the first digit → ↑ → `12:59` (only the hours tens digit changes)
 - `12:59` → caret right after the second digit → ↑ → `13:59` (only the hours ones digit changes)
-- `00:55` → caret right after the third digit → ↑ → `00:59` (capped at the field maximum rather than rolling over to `00:65`)
-- `99:00` → caret right after the first digit → ↑ → `99:00` (capped; a digit never wraps past the field maximum)
-- `00:00` → caret right after any digit → ↓ → `00:00` (floored; a digit never wraps below zero)
+- `00:55` → caret right after the third digit → ↑ → `00:05` (incrementing past the field maximum restarts the digit at 0, rather than producing an invalid `00:65`)
+- `99:00` → caret right after the first digit → ↑ → `09:00` (a digit hitting its own maximum of 9 also restarts at 0)
+- `00:00` → caret right after any digit → ↓ → wraps to the digit's maximum instead of going negative
 
 ### Value bounds
 

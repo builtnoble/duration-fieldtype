@@ -92,10 +92,10 @@ export const resolveDurationDigit = (value, caret) => {
  * Step a single digit (identified by its character index into a formatted
  * "hh:mm" value) by one unit, independently of the other digit in its field.
  *
- * The digit clamps at 0 and 9 rather than carrying into, or wrapping from,
- * the other digit in its field. The resulting hours/minutes value is then
- * clamped to the field's bounds, since a tens digit can otherwise land the
- * field outside its valid range (e.g. minutes' tens digit going from 5 to 6).
+ * The digit wraps back to 0 (incrementing) or 9 (decrementing) rather than
+ * carrying into the other digit, once it either exceeds its own 0-9 range or
+ * would push the field's value past its bounds -- e.g. minutes' tens digit
+ * going from 5 to 6 restarts at 0 rather than producing an invalid 6X value.
  *
  * @param {{ hours: number, minutes: number }} parts
  * @param {number} digitIndex 0 (hours tens), 1 (hours ones), 3 (minutes tens), or 4 (minutes ones)
@@ -111,9 +111,17 @@ export const stepDurationDigit = (parts, digitIndex, direction, { maxHours, maxM
     const maxForField = isHours ? maxHours : maxMinutes;
 
     const currentDigit = Math.floor(fieldValue / place) % 10;
-    const newDigit = direction > 0 ? Math.min(currentDigit + 1, 9) : Math.max(currentDigit - 1, 0);
-    const steppedValue = fieldValue - currentDigit * place + newDigit * place;
-    const clampedValue = Math.min(steppedValue, maxForField);
+    const otherDigitsValue = fieldValue - currentDigit * place;
+
+    let newDigit = currentDigit + direction;
+    let steppedValue = otherDigitsValue + newDigit * place;
+
+    if (newDigit < 0 || newDigit > 9 || steppedValue < 0 || steppedValue > maxForField) {
+        newDigit = direction > 0 ? 0 : 9;
+        steppedValue = otherDigitsValue + newDigit * place;
+    }
+
+    const clampedValue = Math.min(Math.max(steppedValue, 0), maxForField);
 
     return isHours ? { hours: clampedValue, minutes: parts.minutes } : { hours: parts.hours, minutes: clampedValue };
 };

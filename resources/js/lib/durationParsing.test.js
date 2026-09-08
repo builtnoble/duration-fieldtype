@@ -81,7 +81,7 @@ describe('resolveDurationDigit: classifies a caret position as one of the four h
     });
 });
 
-describe('stepDurationDigit: steps a single digit independently, clamped to bounds', () => {
+describe('stepDurationDigit: steps a single digit independently, wrapping at bounds', () => {
     const bounds = { maxHours: 99, maxMinutes: 59 };
 
     it('increments the hours tens digit without touching the hours ones digit or minutes', () => {
@@ -100,20 +100,27 @@ describe('stepDurationDigit: steps a single digit independently, clamped to boun
         expect(stepDurationDigit({ hours: 13, minutes: 45 }, 4, 1, bounds)).toEqual({ hours: 13, minutes: 46 });
     });
 
-    it('clamps a digit at 9 instead of wrapping into the digit next to it', () => {
-        expect(stepDurationDigit({ hours: 99, minutes: 0 }, 0, 1, bounds)).toEqual({ hours: 99, minutes: 0 });
+    it('wraps a digit back to 0 instead of carrying into the digit next to it', () => {
+        expect(stepDurationDigit({ hours: 99, minutes: 0 }, 0, 1, bounds)).toEqual({ hours: 9, minutes: 0 });
     });
 
-    it('clamps a digit at 0 instead of wrapping into the digit next to it', () => {
-        expect(stepDurationDigit({ hours: 0, minutes: 0 }, 0, -1, bounds)).toEqual({ hours: 0, minutes: 0 });
+    it('wraps a digit back to 9 instead of borrowing from the digit next to it', () => {
+        expect(stepDurationDigit({ hours: 0, minutes: 0 }, 0, -1, bounds)).toEqual({ hours: 90, minutes: 0 });
     });
 
-    it('clamps the field to its maximum when the tens digit alone would exceed it', () => {
-        expect(stepDurationDigit({ hours: 0, minutes: 55 }, 3, 1, bounds)).toEqual({ hours: 0, minutes: 59 });
+    it('wraps the tens digit back to 0 once it alone would push the field past its maximum', () => {
+        expect(stepDurationDigit({ hours: 0, minutes: 55 }, 3, 1, bounds)).toEqual({ hours: 0, minutes: 5 });
     });
 
-    it('honors a custom bound instead of the field defaults', () => {
-        expect(stepDurationDigit({ hours: 4, minutes: 0 }, 0, 1, { maxHours: 5, maxMinutes: 59 })).toEqual({
+    it('honors a custom bound: wraps once incrementing would exceed it', () => {
+        expect(stepDurationDigit({ hours: 5, minutes: 0 }, 1, 1, { maxHours: 5, maxMinutes: 59 })).toEqual({
+            hours: 0,
+            minutes: 0,
+        });
+    });
+
+    it('honors a custom bound: stays within it right up to the limit', () => {
+        expect(stepDurationDigit({ hours: 4, minutes: 0 }, 1, 1, { maxHours: 5, maxMinutes: 59 })).toEqual({
             hours: 5,
             minutes: 0,
         });

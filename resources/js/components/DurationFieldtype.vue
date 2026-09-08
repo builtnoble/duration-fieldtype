@@ -3,7 +3,7 @@ import { Fieldtype } from '@statamic/cms';
 import { Input } from '@statamic/cms/ui';
 import { vMaska } from 'maska/vue';
 import { useDurationMasking } from '@/composables/useDurationMasking';
-import { formatHourMinute, normalizeToHourMinute, resolveDurationDigit, stepDurationDigit } from '@/lib/durationParsing';
+import { normalizeToHourMinute, resolveDurationDigit, stepDurationDigit } from '@/lib/durationParsing';
 
 const emit = defineEmits(Fieldtype.emits);
 const props = defineProps(Fieldtype.props);
@@ -20,17 +20,20 @@ const { options, bounds } = useDurationMasking(props.meta, {
 // single digit the caret sits immediately after (hours tens/ones, minutes
 // tens/ones), independently of the digit next to it. A caret with no digit
 // right before it (the very start of the field, or just after the ":")
-// leaves the keypress alone rather than guessing a target. Setting
-// input.value and dispatching a real InputEvent lets maska's own
-// onInput/onMaska pipeline reprocess the new duration normally (confirmed
-// idempotent) and update() fires through the existing wiring rather than a
-// separate code path.
+// leaves the keypress alone rather than guessing a target.
 //
-// That pipeline triggers a Vue re-render that reassigns the input's raw
-// value from the fieldtype's underlying model before maska's own directive
-// re-run reformats it; that intermediate assignment resets the caret to the
-// end. Re-applying it once now and once more on the next frame (after that
-// settles) keeps repeated arrow-key stepping on the same digit.
+// update() is called directly rather than through maska's own onMaska
+// pipeline: duration's maska config has no mask/number token (unlike
+// currency's), so simulating an input event for maska to reprocess isn't
+// meaningful here and risked maska misreading the digit that wasn't
+// touched. If maska's own watcher also reacts to the resulting model change
+// and re-fires onMaska, the composable's existing dedupe makes that a
+// harmless no-op.
+//
+// Vue's re-render (triggered by update()) reassigns the input's raw value
+// before maska's own directive re-run reformats it, resetting the caret to
+// the end; restoring it on the next frame keeps repeated stepping on the
+// same digit.
 const handleKeyDown = (event) => {
     if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') {
         return;
@@ -49,18 +52,9 @@ const handleKeyDown = (event) => {
     const direction = event.key === 'ArrowUp' ? 1 : -1;
 
     const normalized = normalizeToHourMinute(input.value, bounds);
-    const stepped = stepDurationDigit(normalized, digitIndex, direction, bounds);
+    const { hours, minutes } = stepDurationDigit(normalized, digitIndex, direction, bounds);
 
-    input.value = formatHourMinute(stepped);
-    input.setSelectionRange(caret, caret);
-
-    input.dispatchEvent(
-        new InputEvent('input', {
-            bubbles: true,
-            cancelable: true,
-            inputType: direction > 0 ? 'insertText' : 'deleteContentBackward',
-        }),
-    );
+    update(`${String(hours).padStart(2, '0')}${String(minutes).padStart(2, '0')}`);
 
     requestAnimationFrame(() => {
         if (document.activeElement === input) {
