@@ -38,37 +38,33 @@ class Duration extends Fieldtype
             ],
             'stripLeadingZero' => [
                 'display' => __('Strip Leading Zero'),
-                'instructions' => __('Show numbers without a leading zero in Antlers output, e.g. "3 hrs" instead of "03 hrs".'),
+                'instructions' => __('Show numbers without a leading zero in Antlers output, e.g. "3 hrs" instead of "03 hrs". Has no effect unless at least one label below is also set.'),
                 'type' => 'toggle',
                 'default' => false,
                 'width' => 100,
             ],
             'hourLabel' => [
                 'display' => __('Hour Label (Singular)'),
-                'instructions' => __('The label shown after a single hour in Antlers output, e.g. "hr".'),
+                'instructions' => __('The label shown after a single hour in Antlers output, e.g. "hr". Leave every label field blank to output plain hh:mm instead, matching the Control Panel display.'),
                 'type' => 'text',
-                'default' => self::DEFAULT_HOUR_LABEL,
                 'width' => 50,
             ],
             'hourLabelPlural' => [
                 'display' => __('Hour Label (Plural)'),
                 'instructions' => __('The label shown after more than one hour in Antlers output, e.g. "hrs".'),
                 'type' => 'text',
-                'default' => self::DEFAULT_HOUR_LABEL_PLURAL,
                 'width' => 50,
             ],
             'minuteLabel' => [
                 'display' => __('Minute Label (Singular)'),
                 'instructions' => __('The label shown after a single minute in Antlers output, e.g. "min".'),
                 'type' => 'text',
-                'default' => self::DEFAULT_MINUTE_LABEL,
                 'width' => 50,
             ],
             'minuteLabelPlural' => [
                 'display' => __('Minute Label (Plural)'),
                 'instructions' => __('The label shown after more than one minute in Antlers output, e.g. "mins".'),
                 'type' => 'text',
-                'default' => self::DEFAULT_MINUTE_LABEL_PLURAL,
                 'width' => 50,
             ],
         ];
@@ -120,6 +116,10 @@ class Duration extends Fieldtype
     public function augment($value): string
     {
         [$hours, $minutes] = $this->toHourMinuteParts($value);
+
+        if (! $this->hasConfiguredLabels()) {
+            return sprintf('%02d:%02d', $hours, $minutes);
+        }
 
         $minuteLabel = $this->minuteLabel($minutes);
 
@@ -217,6 +217,25 @@ class Duration extends Fieldtype
         }
 
         return min(max((int) $configured, 0), self::DEFAULT_MAX_HOURS);
+    }
+
+    /**
+     * Whether the field has at least one non-blank label configured. When
+     * none are, augment() falls back to the same plain "hh:mm" the Control
+     * Panel shows rather than assuming English unit words, and Strip Leading
+     * Zero has nothing to act on.
+     */
+    protected function hasConfiguredLabels(): bool
+    {
+        foreach (['hourLabel', 'hourLabelPlural', 'minuteLabel', 'minuteLabelPlural'] as $key) {
+            $configured = $this->config($key);
+
+            if (is_string($configured) && $configured !== '') {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

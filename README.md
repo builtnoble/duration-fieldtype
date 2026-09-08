@@ -1,6 +1,6 @@
 # Duration Fieldtype
 
-> A Statamic fieldtype for storing and displaying time durations. Values are saved as integers in milliseconds, entered via a masked `hh:mm` input in the Control Panel, and output as a human-readable string in Antlers templates.
+> A Statamic fieldtype for storing and displaying time durations. Values are saved as integers in milliseconds, entered via a masked `hh:mm` input in the Control Panel, and output in Antlers templates as either plain `hh:mm` or an optional human-readable string.
 
 ## Features
 
@@ -10,8 +10,8 @@
 - **Keyboard stepping** — pressing `↑` or `↓` while the field is focused increments or decrements whichever single digit the cursor sits immediately after
 - **Paste support** — pasting any text extracts its digits and replaces the field's value, clamped to the field's bounds
 - **Truncation to minute** — partial minutes are discarded on load; sub-minute precision is not stored or displayed
-- **Antlers ready** — augmented values are returned as a human-readable string (e.g. `01 hr 30 mins`, or `1 hr 30 mins` with leading zeros stripped) with singular and plural labels, and the minutes segment is omitted entirely when zero
-- **Localizable labels** — the `hr`/`hrs`/`min`/`mins` labels used in Antlers output are configurable per field, so a site can translate them without the addon needing to bundle every language
+- **Antlers ready** — augmented values default to plain `hh:mm` (matching the Control Panel display) unless a label is configured, in which case they become a human-readable string (e.g. `01 hr 30 mins`, or `1 hr 30 mins` with leading zeros stripped) with the minutes segment omitted entirely when zero
+- **Localizable labels** — optionally configure `hr`/`hrs`/`min`/`mins`-style labels per field, so a site can translate them without the addon needing to bundle every language
 - **Null-safe** — null values display as `00:00` in the CP and `00 mins` in templates
 
 ## How to Install
@@ -27,8 +27,8 @@ Then add the fieldtype to any blueprint in the Control Panel or directly in `res
 ## Configuration
 
 - **Max Hours** — the maximum number of hours the field allows, from `0` to `99` (default `99`). A value outside that range is clamped rather than rejected. Minutes are not configurable and always range `00`–`59`.
-- **Strip Leading Zero** — off by default (`03 hrs`, `05 mins`), matching the zero-padded CP display. Enabling it removes the leading zero from single-digit numbers in `augment()` output only (`3 hrs`, `5 mins`); the Control Panel's `hh:mm` input is unaffected either way.
-- **Hour Label (Singular / Plural)** and **Minute Label (Singular / Plural)** — the words appended after the number in `augment()` output (defaults: `hr`/`hrs` and `min`/`mins`). This is a lightweight localization mechanism: rather than the addon bundling a translation for every language, a site can set these to whatever its own language needs (e.g. `heure`/`heures`), including setting the singular and plural fields to the same value for a language that doesn't distinguish them. A blank value falls back to the English default. This covers the common "different word/suffix for exactly one vs. more than one" pattern; it isn't a full pluralization engine, so languages with more than two plural forms aren't represented exactly.
+- **Hour Label (Singular / Plural)** and **Minute Label (Singular / Plural)** — all blank by default. As soon as **any one** of these four fields is set, `augment()` switches from plain `hh:mm` to a human-readable string built from these labels (falling back to the English `hr`/`hrs`/`min`/`mins` for whichever of the four are still left blank). This is a lightweight localization mechanism: rather than the addon bundling a translation for every language, a site can set these to whatever its own language needs (e.g. `heure`/`heures`), including setting the singular and plural fields to the same value for a language that doesn't distinguish them. It covers the common "different word/suffix for exactly one vs. more than one" pattern; it isn't a full pluralization engine, so languages with more than two plural forms aren't represented exactly.
+- **Strip Leading Zero** — off by default (`03 hrs`, `05 mins`). Enabling it removes the leading zero from single-digit numbers in the human-readable `augment()` output (`3 hrs`, `5 mins`). It has no effect while no label is configured, since plain `hh:mm` output is always zero-padded to match the Control Panel display, and no effect on the Control Panel input either way.
 
 ## How It Works
 
@@ -45,7 +45,7 @@ This fieldtype uses the standard Statamic fieldtype lifecycle and maps each meth
 - **`preProcessIndex($value)`**
   - converts stored milliseconds to `hh:mm` for display in Control Panel index listings
 - **`augment($value)`**
-  - converts stored milliseconds to a human-readable string for Antlers template output
+  - converts stored milliseconds to plain `hh:mm`, or a human-readable string once a label is configured, for Antlers template output
 
 ### Storage
 
@@ -53,11 +53,22 @@ Values are stored as plain integers representing the duration in milliseconds. A
 
 ### Display in templates
 
-When a stored value is augmented for use in Antlers templates, it is formatted as a human-readable string with singular/plural labels:
+By default, augmenting a stored value for Antlers produces the same plain `hh:mm` string shown in the Control Panel:
 
 ```antlers
 {{ duration }}
 {{# Examples:
+    0        → 00:00
+    5400000  → 01:30
+    7320000  → 02:02
+#}}
+```
+
+Once at least one of the Hour/Minute Label settings is configured, `augment()` instead produces a human-readable string with singular/plural labels, omitting whichever segment is zero:
+
+```antlers
+{{ duration }}
+{{# Examples (Hour Label set to "hr"):
     0        → 00 mins          (0 mins with Strip Leading Zero enabled)
     60000    → 01 min           (1 min)
     5400000  → 01 hr 30 mins    (1 hr 30 mins)
@@ -99,7 +110,7 @@ Pasting into the field replaces its entire value rather than inserting at the ca
 
 ### Null and empty handling
 
-Both `preProcess` and `preProcessIndex` handle `null` defensively by returning `00:00`. `augment` returns `00 mins` for null or zero values so templates always receive a non-empty string.
+Both `preProcess` and `preProcessIndex` handle `null` defensively by returning `00:00`. `augment` returns `00:00` (or `00 mins`, once a label is configured) for null or zero values so templates always receive a non-empty string.
 
 ## Running Tests
 

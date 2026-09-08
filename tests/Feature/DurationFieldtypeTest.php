@@ -99,28 +99,55 @@ describe('configured maxHours: caps parsing and formatting at the configured lim
     it('clamps augment() output to the configured max hours', function () {
         $fieldtype = $this->fieldtypeWithConfig(['maxHours' => 5]);
 
-        expect($fieldtype->augment(900_000_000))->toBe('05 hrs 59 mins');
+        expect($fieldtype->augment(900_000_000))->toBe('05:59');
     });
 });
 
-describe('augment method: transforms stored milliseconds for Antlers template output', function () {
-    it('shows only mins when hours is zero', function () {
-        expect($this->fieldtype->augment(null))->toBe('00 mins')
-            ->and($this->fieldtype->augment(60_000))->toBe('01 min');
+describe('augment method: defaults to plain hh:mm when no labels are configured', function () {
+    it('matches the Control Panel hh:mm display', function () {
+        expect($this->fieldtype->augment(5_400_000))->toBe('01:30');
     });
 
-    it('shows only hrs when minutes is zero', function () {
-        expect($this->fieldtype->augment(3_600_000))->toBe('01 hr')
-            ->and($this->fieldtype->augment(7_200_000))->toBe('02 hrs');
+    it('returns 00:00 for null input', function () {
+        expect($this->fieldtype->augment(null))->toBe('00:00');
     });
 
-    it('shows both hrs and mins when both are non-zero', function () {
-        expect($this->fieldtype->augment(5_400_000))->toBe('01 hr 30 mins')
-            ->and($this->fieldtype->augment(7_260_000))->toBe('02 hrs 01 min');
+    it('caps augmented output at the field maximum for large durations', function () {
+        expect($this->fieldtype->augment(900_000_000))->toBe('99:59');
+    });
+
+    it('treats all-blank label config the same as no labels configured at all', function () {
+        $fieldtype = $this->fieldtypeWithConfig([
+            'hourLabel' => '', 'hourLabelPlural' => '',
+            'minuteLabel' => '', 'minuteLabelPlural' => '',
+        ]);
+
+        expect($fieldtype->augment(5_400_000))->toBe('01:30');
     });
 });
 
-describe('configured labels: localizes the unit labels used in augment() output', function () {
+describe('configured labels: switches augment() to human-readable output and localizes the unit words', function () {
+    it('omits the hours segment when hours is zero', function () {
+        $fieldtype = $this->fieldtypeWithConfig(['hourLabel' => 'hr']);
+
+        expect($fieldtype->augment(null))->toBe('00 mins')
+            ->and($fieldtype->augment(60_000))->toBe('01 min');
+    });
+
+    it('omits the minutes segment when minutes is zero', function () {
+        $fieldtype = $this->fieldtypeWithConfig(['hourLabel' => 'hr']);
+
+        expect($fieldtype->augment(3_600_000))->toBe('01 hr')
+            ->and($fieldtype->augment(7_200_000))->toBe('02 hrs');
+    });
+
+    it('shows both segments when both are non-zero', function () {
+        $fieldtype = $this->fieldtypeWithConfig(['hourLabel' => 'hr']);
+
+        expect($fieldtype->augment(5_400_000))->toBe('01 hr 30 mins')
+            ->and($fieldtype->augment(7_260_000))->toBe('02 hrs 01 min');
+    });
+
     it('uses configured singular and plural hour labels', function () {
         $fieldtype = $this->fieldtypeWithConfig(['hourLabel' => 'heure', 'hourLabelPlural' => 'heures']);
 
@@ -144,33 +171,37 @@ describe('configured labels: localizes the unit labels used in augment() output'
         expect($fieldtype->augment(5_400_000))->toBe('01 Std 30 Min');
     });
 
-    it('falls back to the English defaults for an empty configured label', function () {
-        $fieldtype = $this->fieldtypeWithConfig(['hourLabel' => '']);
+    it('falls back to the English default for a blank label while another label is configured', function () {
+        $fieldtype = $this->fieldtypeWithConfig(['hourLabel' => '', 'minuteLabelPlural' => 'minutos']);
 
         expect($fieldtype->augment(3_600_000))->toBe('01 hr');
     });
-
-    it('falls back to the English defaults when labels are not configured', function () {
-        expect($this->fieldtype->augment(3_600_000))->toBe('01 hr')
-            ->and($this->fieldtype->augment(60_000))->toBe('01 min');
-    });
 });
 
-describe('configured stripLeadingZero: controls whether augment() zero-pads numbers', function () {
-    it('zero-pads numbers by default', function () {
-        expect($this->fieldtype->augment(3_600_000))->toBe('01 hr')
-            ->and($this->fieldtype->augment(5_400_000))->toBe('01 hr 30 mins');
+describe('configured stripLeadingZero: controls whether augment() zero-pads numbers, only once labels are configured', function () {
+    it('is void when no labels are configured, always producing plain zero-padded hh:mm', function () {
+        $fieldtype = $this->fieldtypeWithConfig(['stripLeadingZero' => true]);
+
+        expect($fieldtype->augment(3_600_000))->toBe('01:00')
+            ->and($fieldtype->augment(5_400_000))->toBe('01:30');
     });
 
-    it('strips the leading zero from single-digit numbers when enabled', function () {
-        $fieldtype = $this->fieldtypeWithConfig(['stripLeadingZero' => true]);
+    it('zero-pads numbers by default once a label is configured', function () {
+        $fieldtype = $this->fieldtypeWithConfig(['hourLabel' => 'hr']);
+
+        expect($fieldtype->augment(3_600_000))->toBe('01 hr')
+            ->and($fieldtype->augment(5_400_000))->toBe('01 hr 30 mins');
+    });
+
+    it('strips the leading zero from single-digit numbers when enabled alongside a configured label', function () {
+        $fieldtype = $this->fieldtypeWithConfig(['hourLabel' => 'hr', 'stripLeadingZero' => true]);
 
         expect($fieldtype->augment(3_600_000))->toBe('1 hr')
             ->and($fieldtype->augment(5_400_000))->toBe('1 hr 30 mins');
     });
 
     it('leaves double-digit numbers unaffected when enabled', function () {
-        $fieldtype = $this->fieldtypeWithConfig(['stripLeadingZero' => true]);
+        $fieldtype = $this->fieldtypeWithConfig(['hourLabel' => 'hr', 'stripLeadingZero' => true]);
 
         expect($fieldtype->augment(84_600_000))->toBe('23 hrs 30 mins');
     });
