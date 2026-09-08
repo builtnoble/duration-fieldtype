@@ -155,3 +155,23 @@ describe('configured labels: localizes the unit labels used in augment() output'
             ->and($this->fieldtype->augment(60_000))->toBe('01 min');
     });
 });
+
+describe('configured stripLeadingZero: controls whether augment() zero-pads numbers', function () {
+    it('zero-pads numbers by default', function () {
+        expect($this->fieldtype->augment(3_600_000))->toBe('01 hr')
+            ->and($this->fieldtype->augment(5_400_000))->toBe('01 hr 30 mins');
+    });
+
+    it('strips the leading zero from single-digit numbers when enabled', function () {
+        $fieldtype = $this->fieldtypeWithConfig(['stripLeadingZero' => true]);
+
+        expect($fieldtype->augment(3_600_000))->toBe('1 hr')
+            ->and($fieldtype->augment(5_400_000))->toBe('1 hr 30 mins');
+    });
+
+    it('leaves double-digit numbers unaffected when enabled', function () {
+        $fieldtype = $this->fieldtypeWithConfig(['stripLeadingZero' => true]);
+
+        expect($fieldtype->augment(84_600_000))->toBe('23 hrs 30 mins');
+    });
+});

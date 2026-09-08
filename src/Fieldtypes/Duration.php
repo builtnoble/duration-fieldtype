@@ -36,6 +36,13 @@ class Duration extends Fieldtype
                 'max' => self::DEFAULT_MAX_HOURS,
                 'width' => 100,
             ],
+            'stripLeadingZero' => [
+                'display' => __('Strip Leading Zero'),
+                'instructions' => __('Show numbers without a leading zero in Antlers output, e.g. "3 hrs" instead of "03 hrs".'),
+                'type' => 'toggle',
+                'default' => false,
+                'width' => 100,
+            ],
             'hourLabel' => [
                 'display' => __('Hour Label (Singular)'),
                 'instructions' => __('The label shown after a single hour in Antlers output, e.g. "hr".'),
@@ -117,16 +124,22 @@ class Duration extends Fieldtype
         $minuteLabel = $this->minuteLabel($minutes);
 
         if ($hours === 0) {
-            return sprintf('%02d %s', $minutes, $minuteLabel);
+            return sprintf('%s %s', $this->formatNumber($minutes), $minuteLabel);
         }
 
         $hourLabel = $this->hourLabel($hours);
 
         if ($minutes === 0) {
-            return sprintf('%02d %s', $hours, $hourLabel);
+            return sprintf('%s %s', $this->formatNumber($hours), $hourLabel);
         }
 
-        return sprintf('%02d %s %02d %s', $hours, $hourLabel, $minutes, $minuteLabel);
+        return sprintf(
+            '%s %s %s %s',
+            $this->formatNumber($hours),
+            $hourLabel,
+            $this->formatNumber($minutes),
+            $minuteLabel
+        );
     }
 
     /**
@@ -236,5 +249,19 @@ class Duration extends Fieldtype
         }
 
         return $minutes === 1 ? self::DEFAULT_MINUTE_LABEL : self::DEFAULT_MINUTE_LABEL_PLURAL;
+    }
+
+    /**
+     * Format a number for Antlers output, zero-padded to two digits unless
+     * the field is configured to strip the leading zero.
+     */
+    protected function formatNumber(int $number): string
+    {
+        return $this->stripLeadingZero() ? (string) $number : sprintf('%02d', $number);
+    }
+
+    protected function stripLeadingZero(): bool
+    {
+        return (bool) $this->config('stripLeadingZero', false);
     }
 }
