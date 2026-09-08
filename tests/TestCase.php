@@ -21,7 +21,7 @@ abstract class TestCase extends AddonTestCase
             'type' => 'duration',
         ]);
 
-        $this->fieldtype = new Duration;
+        $this->fieldtype = new Duration();
         $this->fieldtype->setField($field);
     }
 }
