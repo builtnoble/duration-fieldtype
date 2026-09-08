@@ -12,13 +12,7 @@ class Duration extends Fieldtype
 
     protected const MILLISECONDS_PER_MINUTE = 60_000;
 
-    protected const DEFAULT_HOUR_LABEL = 'hr';
-
-    protected const DEFAULT_HOUR_LABEL_PLURAL = 'hrs';
-
-    protected const DEFAULT_MINUTE_LABEL = 'min';
-
-    protected const DEFAULT_MINUTE_LABEL_PLURAL = 'mins';
+    protected const LABEL_KEYS = ['hourLabel', 'hourLabelPlural', 'minuteLabel', 'minuteLabelPlural'];
 
     protected $icon = 'time-clock';
 
@@ -38,14 +32,15 @@ class Duration extends Fieldtype
             ],
             'stripLeadingZero' => [
                 'display' => __('Strip Leading Zero'),
-                'instructions' => __('Show numbers without a leading zero in Antlers output, e.g. "3 hrs" instead of "03 hrs". Has no effect unless at least one label below is also set.'),
+                'instructions' => __('Show numbers without a leading zero in Antlers output, e.g. "3 hrs" instead of "03 hrs".'),
                 'type' => 'toggle',
                 'default' => false,
+                'if' => array_fill_keys(self::LABEL_KEYS, 'not empty'),
                 'width' => 100,
             ],
             'hourLabel' => [
                 'display' => __('Hour Label (Singular)'),
-                'instructions' => __('The label shown after a single hour in Antlers output, e.g. "hr". Leave every label field blank to output plain hh:mm instead, matching the Control Panel display.'),
+                'instructions' => __('The label shown after a single hour in Antlers output, e.g. "hr". All four label fields must be filled in for Antlers output to use them; otherwise it stays plain hh:mm, matching the Control Panel display.'),
                 'type' => 'text',
                 'width' => 50,
             ],
@@ -117,7 +112,7 @@ class Duration extends Fieldtype
     {
         [$hours, $minutes] = $this->toHourMinuteParts($value);
 
-        if (! $this->hasConfiguredLabels()) {
+        if (! $this->hasCompleteLabelConfiguration()) {
             return sprintf('%02d:%02d', $hours, $minutes);
         }
 
@@ -220,54 +215,43 @@ class Duration extends Fieldtype
     }
 
     /**
-     * Whether the field has at least one non-blank label configured. When
-     * none are, augment() falls back to the same plain "hh:mm" the Control
-     * Panel shows rather than assuming English unit words, and Strip Leading
-     * Zero has nothing to act on.
+     * Whether all four label fields are filled in. Configuring only some of
+     * them (e.g. hour labels but not minute labels) would mean falling back
+     * to an English word for the others, defeating the point of localizing
+     * in the first place -- so augment() only switches away from plain
+     * "hh:mm" once every label is explicitly set. The Strip Leading Zero
+     * field's own "if" condition keeps it hidden in the Control Panel until
+     * this is true, matching its being a no-op in code either way.
      */
-    protected function hasConfiguredLabels(): bool
+    protected function hasCompleteLabelConfiguration(): bool
     {
-        foreach (['hourLabel', 'hourLabelPlural', 'minuteLabel', 'minuteLabelPlural'] as $key) {
+        foreach (self::LABEL_KEYS as $key) {
             $configured = $this->config($key);
 
-            if (is_string($configured) && $configured !== '') {
-                return true;
+            if (! is_string($configured) || $configured === '') {
+                return false;
             }
         }
 
-        return false;
+        return true;
     }
 
     /**
-     * The configured hour label for the given count (singular or plural),
-     * falling back to the English default when unset or invalid. Configurable
-     * so a site can localize Antlers output without the addon needing to
-     * bundle a translation for every language.
+     * The configured hour label for the given count (singular or plural).
+     * Only called once hasCompleteLabelConfiguration() has confirmed every
+     * label is set, so there's no English-default fallback to reach for here.
      */
     protected function hourLabel(int $hours): string
     {
-        $configured = $this->config($hours === 1 ? 'hourLabel' : 'hourLabelPlural');
-
-        if (is_string($configured) && $configured !== '') {
-            return $configured;
-        }
-
-        return $hours === 1 ? self::DEFAULT_HOUR_LABEL : self::DEFAULT_HOUR_LABEL_PLURAL;
+        return (string) $this->config($hours === 1 ? 'hourLabel' : 'hourLabelPlural');
     }
 
     /**
-     * The configured minute label for the given count (singular or plural),
-     * falling back to the English default when unset or invalid.
+     * The configured minute label for the given count (singular or plural).
      */
     protected function minuteLabel(int $minutes): string
     {
-        $configured = $this->config($minutes === 1 ? 'minuteLabel' : 'minuteLabelPlural');
-
-        if (is_string($configured) && $configured !== '') {
-            return $configured;
-        }
-
-        return $minutes === 1 ? self::DEFAULT_MINUTE_LABEL : self::DEFAULT_MINUTE_LABEL_PLURAL;
+        return (string) $this->config($minutes === 1 ? 'minuteLabel' : 'minuteLabelPlural');
     }
 
     /**
