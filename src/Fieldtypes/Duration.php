@@ -23,6 +23,7 @@ class Duration extends Fieldtype
     {
         return [
             'maxHours' => self::MAX_HOURS,
+            'maxMinutes' => self::MAX_MINUTES,
         ];
     }
 
@@ -78,16 +79,14 @@ class Duration extends Fieldtype
     }
 
     /**
-     * Normalize raw duration input into hour/minute parts for persistence.
+     * Parse masked "01:30" or canonical unmasked "0130" input into hour/minute
+     * parts, clamped to the field's bounds.
      *
-     * Accepts masked values like "01:30" and unmasked digit values like
-     * "0130" from the control panel fieldtype input. Any non-digit characters
-     * are removed, the value is right-trimmed to the last 4 digits (hhmm), and
-     * both parts are clamped to the configured max bounds.
+     * @return array{int, int}
      */
-    protected function parseHourMinuteInput($value): array
+    protected function parseHourMinuteInput(mixed $value): array
     {
-        $digits = preg_replace('/[^\d]/', '', (string) ($value ?? '')) ?? '';
+        $digits = preg_replace('/[^\d]/', '', (string) ($value ?? ''));
 
         if ($digits === '') {
             return [0, 0];
@@ -98,20 +97,13 @@ class Duration extends Fieldtype
         $hours = (int) substr($normalizedDigits, 0, 2);
         $minutes = (int) substr($normalizedDigits, 2, 2);
 
-        return [
-            min(max($hours, 0), self::MAX_HOURS),
-            min(max($minutes, 0), self::MAX_MINUTES),
-        ];
+        return $this->clampToBounds($hours, $minutes);
     }
 
     /**
      * Format stored milliseconds as a zero-padded "hh:mm" string.
-     *
-     * This is used for the control panel edit form and index listings so users
-     * always see a consistent masked value that maps directly to the field input
-     * format.
      */
-    protected function formatMillisecondsAsHourMinute($value): string
+    protected function formatMillisecondsAsHourMinute(mixed $value): string
     {
         [$hours, $minutes] = $this->toHourMinuteParts($value);
 
@@ -121,23 +113,27 @@ class Duration extends Fieldtype
     /**
      * Convert stored milliseconds into clamped hour/minute parts.
      *
-     * Durations are normalized to non-negative values, truncated to whole
-     * minutes, and capped at the field limit of 99:59 so all downstream format
-     * methods receive safe, bounded parts.
+     * @return array{int, int}
      */
-    protected function toHourMinuteParts($value): array
+    protected function toHourMinuteParts(mixed $value): array
     {
         $milliseconds = max((int) ($value ?? 0), 0);
         $totalMinutes = intdiv($milliseconds, self::MILLISECONDS_PER_MINUTE);
-        $maxTotalMinutes = (self::MAX_HOURS * 60) + self::MAX_MINUTES;
 
-        if ($totalMinutes >= $maxTotalMinutes) {
+        return $this->clampToBounds(intdiv($totalMinutes, 60), $totalMinutes % 60);
+    }
+
+    /**
+     * Clamp hour/minute parts to the field's maximum duration of 99:59.
+     *
+     * @return array{int, int}
+     */
+    protected function clampToBounds(int $hours, int $minutes): array
+    {
+        if (($hours * 60) + $minutes >= (self::MAX_HOURS * 60) + self::MAX_MINUTES) {
             return [self::MAX_HOURS, self::MAX_MINUTES];
         }
 
-        $hours = intdiv($totalMinutes, 60);
-        $minutes = $totalMinutes % 60;
-
-        return [$hours, $minutes];
+        return [$hours, min($minutes, self::MAX_MINUTES)];
     }
 }
