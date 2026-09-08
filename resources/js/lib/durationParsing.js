@@ -104,10 +104,13 @@ export const resolveDurationDigit = (value, caret) => {
  * Step a single digit (identified by its character index into a formatted
  * "hh:mm" value) by one unit, independently of the other digit in its field.
  *
- * The digit wraps back to 0 (incrementing) or 9 (decrementing) rather than
- * carrying into the other digit, once it either exceeds its own 0-9 range or
- * would push the field's value past its bounds -- e.g. minutes' tens digit
- * going from 5 to 6 restarts at 0 rather than producing an invalid 6X value.
+ * The digit wraps back to 0 (incrementing) rather than carrying into the
+ * other digit, once it either exceeds 9 or would push the field's value past
+ * its bounds -- e.g. minutes' tens digit going from 5 to 6 restarts at 0
+ * rather than producing an invalid 6X value. Decrementing below 0 wraps to
+ * the *largest* digit that still keeps the field within bounds given the
+ * other digit's current value, not always 9 -- e.g. with minutes ones fixed
+ * at 3 and a 59 cap, the tens digit can only reach 5 (53), not 9 (93).
  *
  * @param {{ hours: number, minutes: number }} parts
  * @param {number} digitIndex 0 (hours tens), 1 (hours ones), 3 (minutes tens), or 4 (minutes ones)
@@ -129,11 +132,9 @@ export const stepDurationDigit = (parts, digitIndex, direction, { maxHours, maxM
     let steppedValue = otherDigitsValue + newDigit * place;
 
     if (newDigit < 0 || newDigit > 9 || steppedValue < 0 || steppedValue > maxForField) {
-        newDigit = direction > 0 ? 0 : 9;
+        newDigit = direction > 0 ? 0 : Math.min(9, Math.max(0, Math.floor((maxForField - otherDigitsValue) / place)));
         steppedValue = otherDigitsValue + newDigit * place;
     }
 
-    const clampedValue = Math.min(Math.max(steppedValue, 0), maxForField);
-
-    return isHours ? { hours: clampedValue, minutes: parts.minutes } : { hours: parts.hours, minutes: clampedValue };
+    return isHours ? { hours: steppedValue, minutes: parts.minutes } : { hours: parts.hours, minutes: steppedValue };
 };

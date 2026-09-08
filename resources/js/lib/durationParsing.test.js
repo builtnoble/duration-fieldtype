@@ -115,8 +115,23 @@ describe('stepDurationDigit: steps a single digit independently, wrapping at bou
         expect(stepDurationDigit({ hours: 99, minutes: 0 }, 0, 1, bounds)).toEqual({ hours: 9, minutes: 0 });
     });
 
-    it('wraps a digit back to 9 instead of borrowing from the digit next to it', () => {
+    it('wraps a digit back to its field maximum instead of borrowing from the digit next to it', () => {
         expect(stepDurationDigit({ hours: 0, minutes: 0 }, 0, -1, bounds)).toEqual({ hours: 90, minutes: 0 });
+    });
+
+    it('wraps a decrementing digit to the largest value that keeps the field in bounds, not always 9', () => {
+        // Minutes ones stays at 3; the tens digit can only reach 5 (53) before
+        // exceeding the 59 cap, so wrapping past 0 must land there, not at 9 (93).
+        expect(stepDurationDigit({ hours: 8, minutes: 3 }, 3, -1, bounds)).toEqual({ hours: 8, minutes: 53 });
+    });
+
+    it('does not wrap a decrementing digit at all when the other digit leaves no room', () => {
+        // Hours ones stays at 7; with a maxHours of 8, the tens digit can only
+        // be 0, so decrementing past 0 has nowhere to go and stays put.
+        expect(stepDurationDigit({ hours: 7, minutes: 0 }, 0, -1, { maxHours: 8, maxMinutes: 59 })).toEqual({
+            hours: 7,
+            minutes: 0,
+        });
     });
 
     it('wraps the tens digit back to 0 once it alone would push the field past its maximum', () => {
