@@ -66,3 +66,55 @@ export const formatHourMinute = ({ hours, minutes }) => {
 
     return `${normalizedHours}:${normalizedMinutes}`;
 };
+
+/**
+ * Determine which duration segment a caret position falls within for a
+ * formatted "hh:mm" display value, so arrow-key stepping can act on whichever
+ * segment the cursor is in rather than always stepping minutes.
+ *
+ * @param {string} value
+ * @param {number} caret
+ *
+ * @returns {'hours' | 'minutes'}
+ */
+export const resolveDurationSegment = (value, caret) => {
+    const separatorIndex = value.indexOf(':');
+
+    if (separatorIndex === -1) {
+        return 'minutes';
+    }
+
+    return caret <= separatorIndex ? 'hours' : 'minutes';
+};
+
+/**
+ * Step a duration by one unit in the given segment.
+ *
+ * Stepping hours only ever changes the hours part, clamped independently to
+ * `maxHours`. Stepping minutes carries overflow/underflow into hours (like a
+ * clock), clamped to the field's combined maximum duration.
+ *
+ * @param {{ hours: number, minutes: number }} parts
+ * @param {'hours' | 'minutes'} segment
+ * @param {1 | -1} direction
+ * @param {{ maxHours: number, maxMinutes: number }} bounds
+ *
+ * @returns {{ hours: number, minutes: number }}
+ */
+export const stepDuration = (parts, segment, direction, { maxHours, maxMinutes }) => {
+    if (segment === 'hours') {
+        return {
+            hours: Math.min(Math.max(parts.hours + direction, 0), maxHours),
+            minutes: parts.minutes,
+        };
+    }
+
+    const maxTotalMinutes = maxHours * 60 + maxMinutes;
+    const currentTotalMinutes = parts.hours * 60 + parts.minutes;
+    const totalMinutes = Math.min(Math.max(currentTotalMinutes + direction, 0), maxTotalMinutes);
+
+    return {
+        hours: Math.floor(totalMinutes / 60),
+        minutes: totalMinutes % 60,
+    };
+};

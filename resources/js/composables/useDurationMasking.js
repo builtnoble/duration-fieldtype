@@ -1,5 +1,11 @@
 import { reactive } from 'vue';
-import { formatHourMinute, normalizeToHourMinute, sanitizeDigits } from '@/lib/durationParsing';
+import {
+    formatHourMinute,
+    normalizeToHourMinute,
+    resolveDurationSegment,
+    sanitizeDigits,
+    stepDuration,
+} from '@/lib/durationParsing';
 
 const DEFAULT_MAX_HOURS = 99;
 const DEFAULT_MAX_MINUTES = 59;
@@ -22,8 +28,6 @@ export const useDurationMasking = ({ maxHours, maxMinutes } = {}, { onUnmaskedVa
         maxMinutes: Number.isFinite(Number(maxMinutes)) ? Number(maxMinutes) : DEFAULT_MAX_MINUTES,
     };
 
-    const maxTotalMinutes = bounds.maxHours * 60 + bounds.maxMinutes;
-
     // Avoid duplicate onMaska emissions for the same normalized input value.
     let lastUnmaskedValue;
 
@@ -44,9 +48,10 @@ export const useDurationMasking = ({ maxHours, maxMinutes } = {}, { onUnmaskedVa
     };
 
     /**
-     * Handle ArrowUp/ArrowDown keypresses to increment or decrement the
-     * duration by one minute. Prevents the default cursor-movement behaviour
-     * that browsers apply to text inputs on arrow keys.
+     * Handle ArrowUp/ArrowDown keypresses to increment or decrement whichever
+     * segment (hours or minutes) the caret is currently positioned in.
+     * Prevents the default cursor-movement behaviour that browsers apply to
+     * text inputs on arrow keys.
      */
     const handleKeyDown = (event) => {
         if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') {
@@ -55,18 +60,15 @@ export const useDurationMasking = ({ maxHours, maxMinutes } = {}, { onUnmaskedVa
 
         event.preventDefault();
 
-        const normalized = normalizeToHourMinute(event.target?.value ?? '', bounds);
-        const currentTotalMinutes = normalized.hours * 60 + normalized.minutes;
+        const value = event.target?.value ?? '';
+        const caret = event.target?.selectionStart ?? value.length;
+        const segment = resolveDurationSegment(value, caret);
+        const direction = event.key === 'ArrowUp' ? 1 : -1;
 
-        const newTotalMinutes =
-            event.key === 'ArrowUp'
-                ? Math.min(currentTotalMinutes + 1, maxTotalMinutes)
-                : Math.max(currentTotalMinutes - 1, 0);
+        const normalized = normalizeToHourMinute(value, bounds);
+        const { hours, minutes } = stepDuration(normalized, segment, direction, bounds);
 
-        const newHours = Math.floor(newTotalMinutes / 60);
-        const newMinutes = newTotalMinutes % 60;
-
-        emitCanonical(newHours, newMinutes);
+        emitCanonical(hours, minutes);
     };
 
     const options = reactive({

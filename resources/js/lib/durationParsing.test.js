@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { formatHourMinute, normalizeToHourMinute, sanitizeDigits } from './durationParsing';
+import {
+    formatHourMinute,
+    normalizeToHourMinute,
+    resolveDurationSegment,
+    sanitizeDigits,
+    stepDuration,
+} from './durationParsing';
 
 const bounds = { maxHours: 99, maxMinutes: 59 };
 
@@ -54,5 +60,61 @@ describe('formatHourMinute: formats hour/minute parts as zero-padded hh:mm', () 
 
     it('formats double-digit hours and minutes unchanged', () => {
         expect(formatHourMinute({ hours: 12, minutes: 45 })).toBe('12:45');
+    });
+});
+
+describe('resolveDurationSegment: classifies a caret position as hours or minutes', () => {
+    it('classifies a caret before the separator as hours', () => {
+        expect(resolveDurationSegment('02:59', 0)).toBe('hours');
+        expect(resolveDurationSegment('02:59', 1)).toBe('hours');
+    });
+
+    it('classifies a caret sitting on the separator as still within hours', () => {
+        expect(resolveDurationSegment('02:59', 2)).toBe('hours');
+    });
+
+    it('classifies a caret after the separator as minutes', () => {
+        expect(resolveDurationSegment('02:59', 3)).toBe('minutes');
+        expect(resolveDurationSegment('02:59', 5)).toBe('minutes');
+    });
+
+    it('defaults to minutes when the value has no separator', () => {
+        expect(resolveDurationSegment('', 0)).toBe('minutes');
+    });
+});
+
+describe('stepDuration: steps one segment by a direction, clamped to bounds', () => {
+    const bounds = { maxHours: 99, maxMinutes: 59 };
+
+    it('increments hours without touching minutes', () => {
+        expect(stepDuration({ hours: 2, minutes: 59 }, 'hours', 1, bounds)).toEqual({ hours: 3, minutes: 59 });
+    });
+
+    it('decrements hours without touching minutes', () => {
+        expect(stepDuration({ hours: 3, minutes: 59 }, 'hours', -1, bounds)).toEqual({ hours: 2, minutes: 59 });
+    });
+
+    it('clamps hours at the field maximum instead of rolling minutes over', () => {
+        expect(stepDuration({ hours: 99, minutes: 59 }, 'hours', 1, bounds)).toEqual({ hours: 99, minutes: 59 });
+    });
+
+    it('floors hours at zero', () => {
+        expect(stepDuration({ hours: 0, minutes: 30 }, 'hours', -1, bounds)).toEqual({ hours: 0, minutes: 30 });
+    });
+
+    it('increments minutes and carries overflow into hours', () => {
+        expect(stepDuration({ hours: 2, minutes: 59 }, 'minutes', 1, bounds)).toEqual({ hours: 3, minutes: 0 });
+    });
+
+    it('decrements minutes and borrows underflow from hours', () => {
+        expect(stepDuration({ hours: 3, minutes: 0 }, 'minutes', -1, bounds)).toEqual({ hours: 2, minutes: 59 });
+    });
+
+    it('clamps minutes stepping at the combined field maximum', () => {
+        expect(stepDuration({ hours: 99, minutes: 59 }, 'minutes', 1, bounds)).toEqual({ hours: 99, minutes: 59 });
+    });
+
+    it('floors minutes stepping at zero', () => {
+        expect(stepDuration({ hours: 0, minutes: 0 }, 'minutes', -1, bounds)).toEqual({ hours: 0, minutes: 0 });
     });
 });

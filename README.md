@@ -6,7 +6,7 @@
 
 - **Millisecond integer storage** — values are saved as raw integers (e.g. `5400000` for 1 hour 30 minutes), keeping arithmetic and sorting predictable
 - **Masked `hh:mm` input** — the Control Panel field renders a masked input that automatically formats digits as hours and minutes, capped at `99:59`
-- **Keyboard stepping** — pressing `↑` or `↓` while the field is focused increments or decrements the duration by one minute
+- **Keyboard stepping** — pressing `↑` or `↓` while the field is focused increments or decrements whichever segment (hours or minutes) the cursor is in
 - **Truncation to minute** — partial minutes are discarded on load; sub-minute precision is not stored or displayed
 - **Antlers ready** — augmented values are returned as a human-readable string (e.g. `01 hr 30 mins`) with singular and plural labels, and the minutes segment is omitted entirely when zero
 - **Null-safe** — null values display as `00:00` in the CP and `00 mins` in templates
@@ -66,12 +66,21 @@ The CP field renders a masked text input using [Maska](https://beholdr.github.io
 
 ### Keyboard stepping
 
-With focus inside the duration field, the `↑` and `↓` arrow keys increment or decrement the duration by one minute:
+With focus inside the duration field, the `↑` and `↓` arrow keys increment or decrement whichever segment the cursor is currently in.
+
+Cursor in the minutes segment (carries into hours, like a clock):
 
 - `02:59` → ↑ → `03:00`
 - `03:00` → ↓ → `02:59`
 - `99:59` → ↑ → `99:59` (capped)
 - `00:00` → ↓ → `00:00` (floored)
+
+Cursor in the hours segment (only the hours change):
+
+- `02:59` → ↑ → `03:59`
+- `03:59` → ↓ → `02:59`
+- `99:59` → ↑ → `99:59` (capped)
+- `00:30` → ↓ → `00:30` (floored)
 
 ### Value bounds
 
