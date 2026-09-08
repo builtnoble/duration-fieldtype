@@ -1,6 +1,10 @@
 # Duration Fieldtype
 
+<!-- statamic:hide -->
+
 > A Statamic fieldtype for storing and displaying time durations. Values are saved as integers in milliseconds, entered via a masked `hh:mm` input in the Control Panel, and output in Antlers templates as either plain `hh:mm` or an optional human-readable string.
+
+<!-- /statamic:hide -->
 
 ## Features
 
