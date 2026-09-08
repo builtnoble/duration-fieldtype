@@ -11,6 +11,7 @@
 - **Paste support** — pasting any text extracts its digits and replaces the field's value, clamped to the field's bounds
 - **Truncation to minute** — partial minutes are discarded on load; sub-minute precision is not stored or displayed
 - **Antlers ready** — augmented values are returned as a human-readable string (e.g. `01 hr 30 mins`) with singular and plural labels, and the minutes segment is omitted entirely when zero
+- **Localizable labels** — the `hr`/`hrs`/`min`/`mins` labels used in Antlers output are configurable per field, so a site can translate them without the addon needing to bundle every language
 - **Null-safe** — null values display as `00:00` in the CP and `00 mins` in templates
 
 ## How to Install
@@ -26,6 +27,7 @@ Then add the fieldtype to any blueprint in the Control Panel or directly in `res
 ## Configuration
 
 - **Max Hours** — the maximum number of hours the field allows, from `0` to `99` (default `99`). A value outside that range is clamped rather than rejected. Minutes are not configurable and always range `00`–`59`.
+- **Hour Label (Singular / Plural)** and **Minute Label (Singular / Plural)** — the words appended after the number in `augment()` output (defaults: `hr`/`hrs` and `min`/`mins`). This is a lightweight localization mechanism: rather than the addon bundling a translation for every language, a site can set these to whatever its own language needs (e.g. `heure`/`heures`), including setting the singular and plural fields to the same value for a language that doesn't distinguish them. A blank value falls back to the English default. This covers the common "different word/suffix for exactly one vs. more than one" pattern; it isn't a full pluralization engine, so languages with more than two plural forms aren't represented exactly.
 
 ## How It Works
 

@@ -12,6 +12,14 @@ class Duration extends Fieldtype
 
     protected const MILLISECONDS_PER_MINUTE = 60_000;
 
+    protected const DEFAULT_HOUR_LABEL = 'hr';
+
+    protected const DEFAULT_HOUR_LABEL_PLURAL = 'hrs';
+
+    protected const DEFAULT_MINUTE_LABEL = 'min';
+
+    protected const DEFAULT_MINUTE_LABEL_PLURAL = 'mins';
+
     protected $icon = 'time-clock';
 
     protected $keywords = ['time', 'duration', 'hours', 'minutes', 'seconds'];
@@ -26,6 +34,34 @@ class Duration extends Fieldtype
                 'default' => self::DEFAULT_MAX_HOURS,
                 'min' => 0,
                 'max' => self::DEFAULT_MAX_HOURS,
+                'width' => 100,
+            ],
+            'hourLabel' => [
+                'display' => __('Hour Label (Singular)'),
+                'instructions' => __('The label shown after a single hour in Antlers output, e.g. "hr".'),
+                'type' => 'text',
+                'default' => self::DEFAULT_HOUR_LABEL,
+                'width' => 50,
+            ],
+            'hourLabelPlural' => [
+                'display' => __('Hour Label (Plural)'),
+                'instructions' => __('The label shown after more than one hour in Antlers output, e.g. "hrs".'),
+                'type' => 'text',
+                'default' => self::DEFAULT_HOUR_LABEL_PLURAL,
+                'width' => 50,
+            ],
+            'minuteLabel' => [
+                'display' => __('Minute Label (Singular)'),
+                'instructions' => __('The label shown after a single minute in Antlers output, e.g. "min".'),
+                'type' => 'text',
+                'default' => self::DEFAULT_MINUTE_LABEL,
+                'width' => 50,
+            ],
+            'minuteLabelPlural' => [
+                'display' => __('Minute Label (Plural)'),
+                'instructions' => __('The label shown after more than one minute in Antlers output, e.g. "mins".'),
+                'type' => 'text',
+                'default' => self::DEFAULT_MINUTE_LABEL_PLURAL,
                 'width' => 50,
             ],
         ];
@@ -78,13 +114,13 @@ class Duration extends Fieldtype
     {
         [$hours, $minutes] = $this->toHourMinuteParts($value);
 
-        $minuteLabel = $minutes === 1 ? 'min' : 'mins';
+        $minuteLabel = $this->minuteLabel($minutes);
 
         if ($hours === 0) {
             return sprintf('%02d %s', $minutes, $minuteLabel);
         }
 
-        $hourLabel = $hours === 1 ? 'hr' : 'hrs';
+        $hourLabel = $this->hourLabel($hours);
 
         if ($minutes === 0) {
             return sprintf('%02d %s', $hours, $hourLabel);
@@ -168,5 +204,37 @@ class Duration extends Fieldtype
         }
 
         return min(max((int) $configured, 0), self::DEFAULT_MAX_HOURS);
+    }
+
+    /**
+     * The configured hour label for the given count (singular or plural),
+     * falling back to the English default when unset or invalid. Configurable
+     * so a site can localize Antlers output without the addon needing to
+     * bundle a translation for every language.
+     */
+    protected function hourLabel(int $hours): string
+    {
+        $configured = $this->config($hours === 1 ? 'hourLabel' : 'hourLabelPlural');
+
+        if (is_string($configured) && $configured !== '') {
+            return $configured;
+        }
+
+        return $hours === 1 ? self::DEFAULT_HOUR_LABEL : self::DEFAULT_HOUR_LABEL_PLURAL;
+    }
+
+    /**
+     * The configured minute label for the given count (singular or plural),
+     * falling back to the English default when unset or invalid.
+     */
+    protected function minuteLabel(int $minutes): string
+    {
+        $configured = $this->config($minutes === 1 ? 'minuteLabel' : 'minuteLabelPlural');
+
+        if (is_string($configured) && $configured !== '') {
+            return $configured;
+        }
+
+        return $minutes === 1 ? self::DEFAULT_MINUTE_LABEL : self::DEFAULT_MINUTE_LABEL_PLURAL;
     }
 }

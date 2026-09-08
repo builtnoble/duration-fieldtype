@@ -119,3 +119,39 @@ describe('augment method: transforms stored milliseconds for Antlers template ou
             ->and($this->fieldtype->augment(7_260_000))->toBe('02 hrs 01 min');
     });
 });
+
+describe('configured labels: localizes the unit labels used in augment() output', function () {
+    it('uses configured singular and plural hour labels', function () {
+        $fieldtype = $this->fieldtypeWithConfig(['hourLabel' => 'heure', 'hourLabelPlural' => 'heures']);
+
+        expect($fieldtype->augment(3_600_000))->toBe('01 heure')
+            ->and($fieldtype->augment(7_200_000))->toBe('02 heures');
+    });
+
+    it('uses configured singular and plural minute labels', function () {
+        $fieldtype = $this->fieldtypeWithConfig(['minuteLabel' => 'minuto', 'minuteLabelPlural' => 'minutos']);
+
+        expect($fieldtype->augment(60_000))->toBe('01 minuto')
+            ->and($fieldtype->augment(120_000))->toBe('02 minutos');
+    });
+
+    it('uses configured labels for both segments together', function () {
+        $fieldtype = $this->fieldtypeWithConfig([
+            'hourLabel' => 'Std', 'hourLabelPlural' => 'Std',
+            'minuteLabel' => 'Min', 'minuteLabelPlural' => 'Min',
+        ]);
+
+        expect($fieldtype->augment(5_400_000))->toBe('01 Std 30 Min');
+    });
+
+    it('falls back to the English defaults for an empty configured label', function () {
+        $fieldtype = $this->fieldtypeWithConfig(['hourLabel' => '']);
+
+        expect($fieldtype->augment(3_600_000))->toBe('01 hr');
+    });
+
+    it('falls back to the English defaults when labels are not configured', function () {
+        expect($this->fieldtype->augment(3_600_000))->toBe('01 hr')
+            ->and($this->fieldtype->augment(60_000))->toBe('01 min');
+    });
+});
