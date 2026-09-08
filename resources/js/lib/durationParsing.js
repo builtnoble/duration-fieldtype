@@ -138,3 +138,67 @@ export const stepDurationDigit = (parts, digitIndex, direction, { maxHours, maxM
 
     return isHours ? { hours: steppedValue, minutes: parts.minutes } : { hours: parts.hours, minutes: steppedValue };
 };
+
+/**
+ * Determine which digit slot a caret position should overwrite when a digit
+ * key is typed, so typing behaves like a fixed-width segmented input (each
+ * keystroke fills the current slot and advances to the next) instead of
+ * naively re-deriving the value from whatever the last 4 digits typed
+ * anywhere in the field happen to be.
+ *
+ * A caret past a slot's own position but still short of the next one
+ * resolves to that next slot -- e.g. a caret just after the hours ones
+ * digit, but still before the minutes tens digit, advances into minutes.
+ *
+ * @param {number} caret
+ *
+ * @returns {number} a character index into a "hh:mm" value (0, 1, 3, or 4)
+ */
+export const resolveDurationTypingSlot = (caret) => {
+    if (caret <= 1) {
+        return caret;
+    }
+
+    return caret <= 3 ? 3 : 4;
+};
+
+/**
+ * The caret position to land on after typing a digit into the given slot, so
+ * sequential typing advances through "hh:mm" the way a segmented date/time
+ * input does (skipping over the ":" separator).
+ *
+ * @param {number} slot
+ *
+ * @returns {number}
+ */
+export const nextCaretAfterTyping = (slot) => {
+    if (slot === 0) {
+        return 1;
+    }
+
+    return slot === 1 ? 3 : slot === 3 ? 4 : 5;
+};
+
+/**
+ * Overwrite the digit at the given slot with a newly typed value, clamped to
+ * the field's bounds, leaving the other digit in that field untouched.
+ *
+ * @param {{ hours: number, minutes: number }} parts
+ * @param {number} slot 0 (hours tens), 1 (hours ones), 3 (minutes tens), or 4 (minutes ones)
+ * @param {number} digit 0-9
+ * @param {{ maxHours: number, maxMinutes: number }} bounds
+ *
+ * @returns {{ hours: number, minutes: number }}
+ */
+export const applyDigitAtSlot = (parts, slot, digit, { maxHours, maxMinutes }) => {
+    const isHours = slot === 0 || slot === 1;
+    const place = slot === 0 || slot === 3 ? 10 : 1;
+    const fieldValue = isHours ? parts.hours : parts.minutes;
+    const maxForField = isHours ? maxHours : maxMinutes;
+
+    const currentDigit = Math.floor(fieldValue / place) % 10;
+    const otherDigitsValue = fieldValue - currentDigit * place;
+    const newFieldValue = Math.min(otherDigitsValue + digit * place, maxForField);
+
+    return isHours ? { hours: newFieldValue, minutes: parts.minutes } : { hours: parts.hours, minutes: newFieldValue };
+};

@@ -71,7 +71,9 @@ Both segments follow singular/plural rules independently. When hours is zero onl
 
 ### Input masking
 
-The CP field renders a masked text input using [Maska](https://beholdr.github.io/maska/). As digits are typed, the display is reformatted live to `hh:mm`. The unmasked canonical value (four digits, `hhmm`) is what gets sent to `process()` on save.
+The CP field renders a masked text input using [Maska](https://beholdr.github.io/maska/). The unmasked canonical value (four digits, `hhmm`) is what gets sent to `process()` on save.
+
+Typing a digit overwrites whichever slot (hours tens, hours ones, minutes tens, or minutes ones) the caret currently sits at and advances to the next slot, like a fixed-width segmented date/time input, rather than inserting the character into the raw text and re-deriving the value from the last 4 digits typed anywhere. A digit typed past the field's maximum is clamped to that maximum rather than accepted as-is (e.g. typing `9` into the hours ones digit with a Max Hours of `8` produces `08`, not `09`).
 
 ### Keyboard stepping
 

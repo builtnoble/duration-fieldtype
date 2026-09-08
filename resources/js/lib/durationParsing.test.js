@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
+    applyDigitAtSlot,
     formatHourMinute,
+    nextCaretAfterTyping,
     normalizeToHourMinute,
     resolveDurationDigit,
+    resolveDurationTypingSlot,
     sanitizeDigits,
     stepDurationDigit,
     toCanonicalValue,
@@ -148,6 +151,76 @@ describe('stepDurationDigit: steps a single digit independently, wrapping at bou
     it('honors a custom bound: stays within it right up to the limit', () => {
         expect(stepDurationDigit({ hours: 4, minutes: 0 }, 1, 1, { maxHours: 5, maxMinutes: 59 })).toEqual({
             hours: 5,
+            minutes: 0,
+        });
+    });
+});
+
+describe('resolveDurationTypingSlot: maps a caret position to the digit slot a typed key overwrites', () => {
+    it('maps the start of the field to the hours tens slot', () => {
+        expect(resolveDurationTypingSlot(0)).toBe(0);
+    });
+
+    it('maps the position right after the hours tens digit to the hours ones slot', () => {
+        expect(resolveDurationTypingSlot(1)).toBe(1);
+    });
+
+    it('advances into the minutes tens slot once past the hours ones digit', () => {
+        expect(resolveDurationTypingSlot(2)).toBe(3);
+        expect(resolveDurationTypingSlot(3)).toBe(3);
+    });
+
+    it('advances into the minutes ones slot once past the minutes tens digit', () => {
+        expect(resolveDurationTypingSlot(4)).toBe(4);
+    });
+
+    it('keeps overwriting the minutes ones slot at the very end of the field', () => {
+        expect(resolveDurationTypingSlot(5)).toBe(4);
+    });
+});
+
+describe('nextCaretAfterTyping: advances the caret to the next slot like a segmented input', () => {
+    it('advances from the hours tens slot to the hours ones slot', () => {
+        expect(nextCaretAfterTyping(0)).toBe(1);
+    });
+
+    it('advances from the hours ones slot into minutes, skipping the separator', () => {
+        expect(nextCaretAfterTyping(1)).toBe(3);
+    });
+
+    it('advances from the minutes tens slot to the minutes ones slot', () => {
+        expect(nextCaretAfterTyping(3)).toBe(4);
+    });
+
+    it('advances to the end of the field after the minutes ones slot', () => {
+        expect(nextCaretAfterTyping(4)).toBe(5);
+    });
+});
+
+describe('applyDigitAtSlot: overwrites a single digit slot with a typed value', () => {
+    it('overwrites the hours tens digit without touching the hours ones digit or minutes', () => {
+        expect(applyDigitAtSlot({ hours: 3, minutes: 45 }, 0, 7, bounds)).toEqual({ hours: 73, minutes: 45 });
+    });
+
+    it('overwrites the hours ones digit without touching the hours tens digit', () => {
+        expect(applyDigitAtSlot({ hours: 13, minutes: 45 }, 1, 9, bounds)).toEqual({ hours: 19, minutes: 45 });
+    });
+
+    it('overwrites the minutes tens digit without touching hours or the minutes ones digit', () => {
+        expect(applyDigitAtSlot({ hours: 8, minutes: 43 }, 3, 5, bounds)).toEqual({ hours: 8, minutes: 53 });
+    });
+
+    it('overwrites the minutes ones digit without touching the minutes tens digit', () => {
+        expect(applyDigitAtSlot({ hours: 8, minutes: 43 }, 4, 9, bounds)).toEqual({ hours: 8, minutes: 49 });
+    });
+
+    it('clamps the result to the field maximum instead of accepting an out-of-range typed value', () => {
+        expect(applyDigitAtSlot({ hours: 0, minutes: 5 }, 3, 9, bounds)).toEqual({ hours: 0, minutes: 59 });
+    });
+
+    it('honors a custom bound', () => {
+        expect(applyDigitAtSlot({ hours: 0, minutes: 0 }, 1, 9, { maxHours: 8, maxMinutes: 59 })).toEqual({
+            hours: 8,
             minutes: 0,
         });
     });
