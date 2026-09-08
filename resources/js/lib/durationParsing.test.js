@@ -64,19 +64,19 @@ describe('formatHourMinute: formats hour/minute parts as zero-padded hh:mm', () 
 });
 
 describe('resolveDurationDigit: classifies a caret position as one of the four hh:mm digits', () => {
-    it('prefers the digit to the left of the caret', () => {
+    it('resolves to the digit immediately before the caret', () => {
         expect(resolveDurationDigit('02:59', 1)).toBe(0);
         expect(resolveDurationDigit('02:59', 2)).toBe(1);
         expect(resolveDurationDigit('02:59', 4)).toBe(3);
         expect(resolveDurationDigit('02:59', 5)).toBe(4);
     });
 
-    it('falls back to the digit on the right when there is none on the left', () => {
-        expect(resolveDurationDigit('02:59', 0)).toBe(0);
-        expect(resolveDurationDigit('02:59', 3)).toBe(3);
+    it('returns null when there is no digit immediately before the caret', () => {
+        expect(resolveDurationDigit('02:59', 0)).toBeNull();
+        expect(resolveDurationDigit('02:59', 3)).toBeNull();
     });
 
-    it('returns null when neither side of the caret is a digit', () => {
+    it('returns null for an empty value', () => {
         expect(resolveDurationDigit('', 0)).toBeNull();
     });
 });

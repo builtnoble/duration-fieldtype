@@ -72,28 +72,20 @@ export const formatHourMinute = ({ hours, minutes }) => {
  * display value) a caret position should step, so arrow-key stepping can act
  * on exactly the digit the cursor is touching.
  *
- * Prefers the digit immediately to the left of the caret, falling back to the
- * digit immediately to the right when there isn't one on the left (the very
- * start of the string, or just after the ":" separator). This means a caret
- * sitting before or after a given digit both target that same digit.
+ * Only a caret sitting immediately after a digit resolves to that digit. A
+ * caret with no digit right before it (the very start of the string, or just
+ * after the ":" separator) resolves to nothing, keeping the rule unambiguous
+ * rather than guessing which neighboring digit was intended.
  *
  * @param {string} value
  * @param {number} caret
  *
- * @returns {number | null} a character index into `value` (0, 1, 3, or 4), or null if neither side is a digit
+ * @returns {number | null} a character index into `value` (0, 1, 3, or 4), or null if the caret isn't right after a digit
  */
 export const resolveDurationDigit = (value, caret) => {
-    const isDigit = (char) => char !== undefined && /\d/.test(char);
+    const precedingChar = value[caret - 1];
 
-    if (isDigit(value[caret - 1])) {
-        return caret - 1;
-    }
-
-    if (isDigit(value[caret])) {
-        return caret;
-    }
-
-    return null;
+    return precedingChar !== undefined && /\d/.test(precedingChar) ? caret - 1 : null;
 };
 
 /**

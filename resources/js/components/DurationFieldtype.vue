@@ -17,11 +17,14 @@ const { options, bounds } = useDurationMasking(props.meta, {
 });
 
 // Handle ArrowUp/ArrowDown keypresses to increment or decrement whichever
-// single digit the caret is currently touching (hours tens/ones, minutes
-// tens/ones), independently of the digit next to it. Setting input.value and
-// dispatching a real InputEvent lets maska's own onInput/onMaska pipeline
-// reprocess the new duration normally (confirmed idempotent) and update()
-// fires through the existing wiring rather than a separate code path.
+// single digit the caret sits immediately after (hours tens/ones, minutes
+// tens/ones), independently of the digit next to it. A caret with no digit
+// right before it (the very start of the field, or just after the ":")
+// leaves the keypress alone rather than guessing a target. Setting
+// input.value and dispatching a real InputEvent lets maska's own
+// onInput/onMaska pipeline reprocess the new duration normally (confirmed
+// idempotent) and update() fires through the existing wiring rather than a
+// separate code path.
 //
 // That pipeline triggers a Vue re-render that reassigns the input's raw
 // value from the fieldtype's underlying model before maska's own directive
@@ -33,13 +36,16 @@ const handleKeyDown = (event) => {
         return;
     }
 
-    event.preventDefault();
-
     const input = event.target;
     const caret = input.selectionStart ?? input.value.length;
-    // A caret with no adjacent digit (an empty/malformed value) falls back
-    // to the rightmost digit, matching the field's minutes-first defaults.
-    const digitIndex = resolveDurationDigit(input.value, caret) ?? 4;
+    const digitIndex = resolveDurationDigit(input.value, caret);
+
+    if (digitIndex === null) {
+        return;
+    }
+
+    event.preventDefault();
+
     const direction = event.key === 'ArrowUp' ? 1 : -1;
 
     const normalized = normalizeToHourMinute(input.value, bounds);
