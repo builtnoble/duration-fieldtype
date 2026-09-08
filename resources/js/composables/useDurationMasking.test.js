@@ -5,7 +5,7 @@ const buildMasking = (meta = {}, callbacks = {}) => useDurationMasking(meta, cal
 
 const buildKeydownEvent = (key, value, caret = value.length) => ({
     key,
-    target: { value, selectionStart: caret },
+    target: { value, selectionStart: caret, setSelectionRange: vi.fn() },
     preventDefault: vi.fn(),
 });
 
@@ -208,5 +208,14 @@ describe('handleKeyDown: steps whichever segment the caret is in on ArrowUp/Arro
         handleKeyDown(buildKeydownEvent('Enter', '01:30', 4));
 
         expect(onUnmaskedValue).not.toHaveBeenCalled();
+    });
+
+    it('restores the caret to its original position so repeated stepping stays on the same segment', () => {
+        const { handleKeyDown } = buildMasking();
+        const event = buildKeydownEvent('ArrowUp', '02:59', 1);
+
+        handleKeyDown(event);
+
+        expect(event.target.setSelectionRange).toHaveBeenCalledWith(1, 1);
     });
 });

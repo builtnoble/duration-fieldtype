@@ -11,6 +11,36 @@ const DEFAULT_MAX_HOURS = 99;
 const DEFAULT_MAX_MINUTES = 59;
 
 /**
+ * Restore the caret to where it was before an arrow-key step.
+ *
+ * update() triggers a Vue re-render that reassigns the input's raw DOM value
+ * before maska's own directive re-run reformats it; that intermediate
+ * assignment resets the caret to the end. Re-applying it synchronously and
+ * once more on the next frame (same fix as useCurrencyMasking.js's caret
+ * handling) keeps repeated stepping on the same hh:mm segment.
+ *
+ * @param {HTMLInputElement} input
+ * @param {number} caret
+ */
+const restoreCaret = (input, caret) => {
+    if (typeof input?.setSelectionRange !== 'function') {
+        return;
+    }
+
+    input.setSelectionRange(caret, caret);
+
+    if (typeof requestAnimationFrame !== 'function') {
+        return;
+    }
+
+    requestAnimationFrame(() => {
+        if (document.activeElement === input) {
+            input.setSelectionRange(caret, caret);
+        }
+    });
+};
+
+/**
  * Build maska options for duration input using Statamic field metadata.
  *
  * The input is displayed as hh:mm while the emitted value is a canonical hhmm
@@ -60,8 +90,9 @@ export const useDurationMasking = ({ maxHours, maxMinutes } = {}, { onUnmaskedVa
 
         event.preventDefault();
 
-        const value = event.target?.value ?? '';
-        const caret = event.target?.selectionStart ?? value.length;
+        const input = event.target;
+        const value = input?.value ?? '';
+        const caret = input?.selectionStart ?? value.length;
         const segment = resolveDurationSegment(value, caret);
         const direction = event.key === 'ArrowUp' ? 1 : -1;
 
@@ -69,6 +100,7 @@ export const useDurationMasking = ({ maxHours, maxMinutes } = {}, { onUnmaskedVa
         const { hours, minutes } = stepDuration(normalized, segment, direction, bounds);
 
         emitCanonical(hours, minutes);
+        restoreCaret(input, caret);
     };
 
     const options = reactive({
