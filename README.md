@@ -5,7 +5,8 @@
 ## Features
 
 - **Millisecond integer storage** — values are saved as raw integers (e.g. `5400000` for 1 hour 30 minutes), keeping arithmetic and sorting predictable
-- **Masked `hh:mm` input** — the Control Panel field renders a masked input that automatically formats digits as hours and minutes, capped at `99:59`
+- **Masked `hh:mm` input** — the Control Panel field renders a masked input that automatically formats digits as hours and minutes, capped at `99:59` by default
+- **Configurable max hours** — cap the field below 99 hours (e.g. `8` for a workday tracker) via the field's "Max Hours" setting; minutes always range `00`–`59`
 - **Keyboard stepping** — pressing `↑` or `↓` while the field is focused increments or decrements whichever single digit the cursor sits immediately after
 - **Paste support** — pasting any text extracts its digits and replaces the field's value, clamped to the field's bounds
 - **Truncation to minute** — partial minutes are discarded on load; sub-minute precision is not stored or displayed
@@ -22,6 +23,10 @@ composer require builtnoble/duration-fieldtype
 
 Then add the fieldtype to any blueprint in the Control Panel or directly in `resources/blueprints/`.
 
+## Configuration
+
+- **Max Hours** — the maximum number of hours the field allows, from `0` to `99` (default `99`). A value outside that range is clamped rather than rejected. Minutes are not configurable and always range `00`–`59`.
+
 ## How It Works
 
 ### Fieldtype lifecycle methods
@@ -29,7 +34,7 @@ Then add the fieldtype to any blueprint in the Control Panel or directly in `res
 This fieldtype uses the standard Statamic fieldtype lifecycle and maps each method to a specific responsibility:
 
 - **`preload()`**
-  - provides metadata to the Vue component (currently the `maxHours` cap)
+  - provides metadata to the Vue component: the configured `maxHours` cap and the fixed `maxMinutes` cap
 - **`preProcess($value)`**
   - converts stored milliseconds to a zero-padded `hh:mm` string for the CP edit form
 - **`process($value)`**
@@ -81,11 +86,11 @@ Pasting into the field replaces its entire value rather than inserting at the ca
 
 ### Value bounds
 
-| Bound           | Value                |
-| --------------- | -------------------- |
-| Maximum display | `99:59`              |
-| Minimum display | `00:00`              |
-| Precision       | 1 minute (60,000 ms) |
+| Bound           | Value                                   |
+| --------------- | ---------------------------------------- |
+| Maximum display | `99:59` by default, or `{Max Hours}:59` |
+| Minimum display | `00:00`                                 |
+| Precision       | 1 minute (60,000 ms)                    |
 
 ### Null and empty handling
 

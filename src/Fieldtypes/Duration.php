@@ -6,7 +6,7 @@ use Statamic\Fields\Fieldtype;
 
 class Duration extends Fieldtype
 {
-    protected const MAX_HOURS = 99;
+    protected const DEFAULT_MAX_HOURS = 99;
 
     protected const MAX_MINUTES = 59;
 
@@ -16,13 +16,28 @@ class Duration extends Fieldtype
 
     protected $keywords = ['time', 'duration', 'hours', 'minutes', 'seconds'];
 
+    protected function configFieldItems(): array
+    {
+        return [
+            'maxHours' => [
+                'display' => __('Max Hours'),
+                'instructions' => __('The maximum number of hours allowed, from 0 to 99.'),
+                'type' => 'integer',
+                'default' => self::DEFAULT_MAX_HOURS,
+                'min' => 0,
+                'max' => self::DEFAULT_MAX_HOURS,
+                'width' => 50,
+            ],
+        ];
+    }
+
     /**
      * Preload any additional data needed for the Vue component.
      */
     public function preload(): array
     {
         return [
-            'maxHours' => self::MAX_HOURS,
+            'maxHours' => $this->maxHours(),
             'maxMinutes' => self::MAX_MINUTES,
         ];
     }
@@ -124,16 +139,34 @@ class Duration extends Fieldtype
     }
 
     /**
-     * Clamp hour/minute parts to the field's maximum duration of 99:59.
+     * Clamp hour/minute parts to the field's maximum duration.
      *
      * @return array{int, int}
      */
     protected function clampToBounds(int $hours, int $minutes): array
     {
-        if (($hours * 60) + $minutes >= (self::MAX_HOURS * 60) + self::MAX_MINUTES) {
-            return [self::MAX_HOURS, self::MAX_MINUTES];
+        $maxHours = $this->maxHours();
+
+        if (($hours * 60) + $minutes >= ($maxHours * 60) + self::MAX_MINUTES) {
+            return [$maxHours, self::MAX_MINUTES];
         }
 
         return [$hours, min($minutes, self::MAX_MINUTES)];
+    }
+
+    /**
+     * The configured maximum number of hours, clamped to what the field's
+     * two-digit hh:mm display can represent, falling back to the default
+     * when unset or invalid.
+     */
+    protected function maxHours(): int
+    {
+        $configured = $this->config('maxHours');
+
+        if (! is_numeric($configured)) {
+            return self::DEFAULT_MAX_HOURS;
+        }
+
+        return min(max((int) $configured, 0), self::DEFAULT_MAX_HOURS);
     }
 }

@@ -6,7 +6,32 @@ describe('preload method: supplies metadata required by the Vue fieldtype compon
 
         expect($preload)
             ->toBeArray()
-            ->and($preload['maxHours'])->toBe(99);
+            ->and($preload['maxHours'])->toBe(99)
+            ->and($preload['maxMinutes'])->toBe(59);
+    });
+
+    it('preloads a configured maxHours value', function () {
+        $fieldtype = $this->fieldtypeWithConfig(['maxHours' => 5]);
+
+        expect($fieldtype->preload()['maxHours'])->toBe(5);
+    });
+
+    it('clamps a configured maxHours above 99 down to 99', function () {
+        $fieldtype = $this->fieldtypeWithConfig(['maxHours' => 150]);
+
+        expect($fieldtype->preload()['maxHours'])->toBe(99);
+    });
+
+    it('clamps a configured maxHours below 0 up to 0', function () {
+        $fieldtype = $this->fieldtypeWithConfig(['maxHours' => -10]);
+
+        expect($fieldtype->preload()['maxHours'])->toBe(0);
+    });
+
+    it('falls back to 99 for a non-numeric maxHours config', function () {
+        $fieldtype = $this->fieldtypeWithConfig(['maxHours' => 'not-a-number']);
+
+        expect($fieldtype->preload()['maxHours'])->toBe(99);
     });
 });
 
@@ -55,6 +80,26 @@ describe('process method: transforms hh:mm input into milliseconds', function ()
     it('clamps out-of-range input to 99:59 before converting to milliseconds', function () {
         expect($this->fieldtype->process('99:99'))->toBe(359_940_000)
             ->and($this->fieldtype->process('1200'))->toBe(43_200_000);
+    });
+});
+
+describe('configured maxHours: caps parsing and formatting at the configured limit instead of 99', function () {
+    it('clamps process() input to the configured max hours', function () {
+        $fieldtype = $this->fieldtypeWithConfig(['maxHours' => 5]);
+
+        expect($fieldtype->process('0930'))->toBe(21_540_000);
+    });
+
+    it('clamps preProcess() output to the configured max hours', function () {
+        $fieldtype = $this->fieldtypeWithConfig(['maxHours' => 5]);
+
+        expect($fieldtype->preProcess(900_000_000))->toBe('05:59');
+    });
+
+    it('clamps augment() output to the configured max hours', function () {
+        $fieldtype = $this->fieldtypeWithConfig(['maxHours' => 5]);
+
+        expect($fieldtype->augment(900_000_000))->toBe('05 hrs 59 mins');
     });
 });
 

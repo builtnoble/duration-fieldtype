@@ -24,4 +24,14 @@ abstract class TestCase extends AddonTestCase
         $this->fieldtype = new Duration();
         $this->fieldtype->setField($field);
     }
+
+    protected function fieldtypeWithConfig(array $config): Duration
+    {
+        $field = new Field('duration', array_merge(['type' => 'duration'], $config));
+
+        $fieldtype = new Duration();
+        $fieldtype->setField($field);
+
+        return $fieldtype;
+    }
 }
