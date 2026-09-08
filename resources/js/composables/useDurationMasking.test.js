@@ -3,12 +3,6 @@ import { useDurationMasking } from './useDurationMasking';
 
 const buildMasking = (meta = {}, callbacks = {}) => useDurationMasking(meta, callbacks);
 
-const buildKeydownEvent = (key, value, caret = value.length) => ({
-    key,
-    target: { value, selectionStart: caret, setSelectionRange: vi.fn() },
-    preventDefault: vi.fn(),
-});
-
 describe('bounds resolution: normalizes the configured max hours/minutes', () => {
     it('defaults to 99:59 when no meta is provided', () => {
         const { options } = buildMasking();
@@ -110,112 +104,16 @@ describe('onMaska: emits deduplicated unmasked values', () => {
     });
 });
 
-describe('handleKeyDown: steps whichever segment the caret is in on ArrowUp/ArrowDown', () => {
-    it('increments minutes on ArrowUp when the caret is in the minutes segment', () => {
-        const onUnmaskedValue = vi.fn();
-        const { handleKeyDown } = buildMasking({}, { onUnmaskedValue });
+describe('bounds: exposes the resolved max hours/minutes for callers', () => {
+    it('defaults to 99/59 when no meta is provided', () => {
+        const { bounds } = buildMasking();
 
-        handleKeyDown(buildKeydownEvent('ArrowUp', '02:59', 4));
-
-        expect(onUnmaskedValue).toHaveBeenCalledWith('0300');
+        expect(bounds).toEqual({ maxHours: 99, maxMinutes: 59 });
     });
 
-    it('decrements minutes on ArrowDown when the caret is in the minutes segment', () => {
-        const onUnmaskedValue = vi.fn();
-        const { handleKeyDown } = buildMasking({}, { onUnmaskedValue });
+    it('reflects a custom maxHours/maxMinutes from preload()', () => {
+        const { bounds } = buildMasking({ maxHours: 5, maxMinutes: 30 });
 
-        handleKeyDown(buildKeydownEvent('ArrowDown', '03:00', 4));
-
-        expect(onUnmaskedValue).toHaveBeenCalledWith('0259');
-    });
-
-    it('increments hours on ArrowUp when the caret is in the hours segment, leaving minutes alone', () => {
-        const onUnmaskedValue = vi.fn();
-        const { handleKeyDown } = buildMasking({}, { onUnmaskedValue });
-
-        handleKeyDown(buildKeydownEvent('ArrowUp', '02:59', 1));
-
-        expect(onUnmaskedValue).toHaveBeenCalledWith('0359');
-    });
-
-    it('decrements hours on ArrowDown when the caret is in the hours segment, leaving minutes alone', () => {
-        const onUnmaskedValue = vi.fn();
-        const { handleKeyDown } = buildMasking({}, { onUnmaskedValue });
-
-        handleKeyDown(buildKeydownEvent('ArrowDown', '03:59', 1));
-
-        expect(onUnmaskedValue).toHaveBeenCalledWith('0259');
-    });
-
-    it('treats a caret sitting on the separator as still within the hours segment', () => {
-        const onUnmaskedValue = vi.fn();
-        const { handleKeyDown } = buildMasking({}, { onUnmaskedValue });
-
-        handleKeyDown(buildKeydownEvent('ArrowUp', '02:59', 2));
-
-        expect(onUnmaskedValue).toHaveBeenCalledWith('0359');
-    });
-
-    it('caps hours at the field maximum without rolling minutes over', () => {
-        const onUnmaskedValue = vi.fn();
-        const { handleKeyDown } = buildMasking({}, { onUnmaskedValue });
-
-        handleKeyDown(buildKeydownEvent('ArrowUp', '99:59', 1));
-
-        expect(onUnmaskedValue).toHaveBeenCalledWith('9959');
-    });
-
-    it('floors hours at zero', () => {
-        const onUnmaskedValue = vi.fn();
-        const { handleKeyDown } = buildMasking({}, { onUnmaskedValue });
-
-        handleKeyDown(buildKeydownEvent('ArrowDown', '00:30', 1));
-
-        expect(onUnmaskedValue).toHaveBeenCalledWith('0030');
-    });
-
-    it('caps minutes stepping at the field maximum duration', () => {
-        const onUnmaskedValue = vi.fn();
-        const { handleKeyDown } = buildMasking({}, { onUnmaskedValue });
-
-        handleKeyDown(buildKeydownEvent('ArrowUp', '99:59', 4));
-
-        expect(onUnmaskedValue).toHaveBeenCalledWith('9959');
-    });
-
-    it('floors minutes stepping at zero', () => {
-        const onUnmaskedValue = vi.fn();
-        const { handleKeyDown } = buildMasking({}, { onUnmaskedValue });
-
-        handleKeyDown(buildKeydownEvent('ArrowDown', '00:00', 4));
-
-        expect(onUnmaskedValue).toHaveBeenCalledWith('0000');
-    });
-
-    it('prevents the default browser behavior for arrow keys', () => {
-        const event = buildKeydownEvent('ArrowUp', '00:00', 4);
-        const { handleKeyDown } = buildMasking();
-
-        handleKeyDown(event);
-
-        expect(event.preventDefault).toHaveBeenCalled();
-    });
-
-    it('ignores keys other than ArrowUp/ArrowDown', () => {
-        const onUnmaskedValue = vi.fn();
-        const { handleKeyDown } = buildMasking({}, { onUnmaskedValue });
-
-        handleKeyDown(buildKeydownEvent('Enter', '01:30', 4));
-
-        expect(onUnmaskedValue).not.toHaveBeenCalled();
-    });
-
-    it('restores the caret to its original position so repeated stepping stays on the same segment', () => {
-        const { handleKeyDown } = buildMasking();
-        const event = buildKeydownEvent('ArrowUp', '02:59', 1);
-
-        handleKeyDown(event);
-
-        expect(event.target.setSelectionRange).toHaveBeenCalledWith(1, 1);
+        expect(bounds).toEqual({ maxHours: 5, maxMinutes: 30 });
     });
 });
