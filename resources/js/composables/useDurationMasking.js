@@ -1,5 +1,5 @@
 import { reactive } from 'vue';
-import { formatHourMinute, normalizeToHourMinute, sanitizeDigits } from '@/lib/durationParsing';
+import { formatHourMinute, normalizeToHourMinute, sanitizeDigits, toCanonicalValue } from '@/lib/durationParsing';
 
 const DEFAULT_MAX_HOURS = 99;
 const DEFAULT_MAX_MINUTES = 59;
@@ -48,7 +48,7 @@ export const useDurationMasking = ({ maxHours, maxMinutes } = {}, { onUnmaskedVa
                 return;
             }
 
-            const unmaskedValue = `${String(normalized.hours).padStart(2, '0')}${String(normalized.minutes).padStart(2, '0')}`;
+            const unmaskedValue = toCanonicalValue(normalized);
 
             if (unmaskedValue === lastUnmaskedValue) {
                 return;

@@ -5,6 +5,7 @@ import {
     resolveDurationDigit,
     sanitizeDigits,
     stepDurationDigit,
+    toCanonicalValue,
 } from './durationParsing';
 
 const bounds = { maxHours: 99, maxMinutes: 59 };
@@ -60,6 +61,16 @@ describe('formatHourMinute: formats hour/minute parts as zero-padded hh:mm', () 
 
     it('formats double-digit hours and minutes unchanged', () => {
         expect(formatHourMinute({ hours: 12, minutes: 45 })).toBe('12:45');
+    });
+});
+
+describe('toCanonicalValue: formats hour/minute parts as the unmasked hhmm digit string', () => {
+    it('zero-pads single-digit hours and minutes', () => {
+        expect(toCanonicalValue({ hours: 1, minutes: 5 })).toBe('0105');
+    });
+
+    it('formats double-digit hours and minutes unchanged', () => {
+        expect(toCanonicalValue({ hours: 12, minutes: 45 })).toBe('1245');
     });
 });
 

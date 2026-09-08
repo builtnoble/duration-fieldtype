@@ -7,6 +7,7 @@
 - **Millisecond integer storage** — values are saved as raw integers (e.g. `5400000` for 1 hour 30 minutes), keeping arithmetic and sorting predictable
 - **Masked `hh:mm` input** — the Control Panel field renders a masked input that automatically formats digits as hours and minutes, capped at `99:59`
 - **Keyboard stepping** — pressing `↑` or `↓` while the field is focused increments or decrements whichever single digit the cursor sits immediately after
+- **Paste support** — pasting any text extracts its digits and replaces the field's value, clamped to the field's bounds
 - **Truncation to minute** — partial minutes are discarded on load; sub-minute precision is not stored or displayed
 - **Antlers ready** — augmented values are returned as a human-readable string (e.g. `01 hr 30 mins`) with singular and plural labels, and the minutes segment is omitted entirely when zero
 - **Null-safe** — null values display as `00:00` in the CP and `00 mins` in templates
@@ -73,6 +74,10 @@ With focus inside the duration field, the `↑` and `↓` arrow keys increment o
 - `00:55` → caret right after the third digit → ↑ → `00:05` (incrementing past the field maximum restarts the digit at 0, rather than producing an invalid `00:65`)
 - `99:00` → caret right after the first digit → ↑ → `09:00` (a digit hitting its own maximum of 9 also restarts at 0)
 - `00:00` → caret right after any digit → ↓ → wraps to the digit's maximum instead of going negative
+
+### Pasting
+
+Pasting into the field replaces its entire value rather than inserting at the caret. Non-digit characters in the pasted text (spaces, colons, letters, etc.) are stripped before parsing, so pasting `1:30 PM` or `0130` both produce `01:30`. Only the last 4 digits of a longer paste are read, and the result is clamped to the field's bounds the same way typed input is.
 
 ### Value bounds
 

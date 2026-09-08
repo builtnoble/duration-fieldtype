@@ -68,6 +68,18 @@ export const formatHourMinute = ({ hours, minutes }) => {
 };
 
 /**
+ * Format hour/minute parts as the canonical unmasked "hhmm" digit string
+ * sent to the backend's process() method, as opposed to formatHourMinute's
+ * "hh:mm" display format.
+ *
+ * @param {{ hours: number, minutes: number }} parts
+ *
+ * @returns {string}
+ */
+export const toCanonicalValue = ({ hours, minutes }) =>
+    `${String(hours).padStart(2, '0')}${String(minutes).padStart(2, '0')}`;
+
+/**
  * Determine which single digit (by character index into a formatted "hh:mm"
  * display value) a caret position should step, so arrow-key stepping can act
  * on exactly the digit the cursor is touching.

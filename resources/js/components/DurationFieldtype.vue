@@ -3,7 +3,13 @@ import { Fieldtype } from '@statamic/cms';
 import { Input } from '@statamic/cms/ui';
 import { vMaska } from 'maska/vue';
 import { useDurationMasking } from '@/composables/useDurationMasking';
-import { normalizeToHourMinute, resolveDurationDigit, stepDurationDigit } from '@/lib/durationParsing';
+import {
+    normalizeToHourMinute,
+    resolveDurationDigit,
+    sanitizeDigits,
+    stepDurationDigit,
+    toCanonicalValue,
+} from '@/lib/durationParsing';
 
 const emit = defineEmits(Fieldtype.emits);
 const props = defineProps(Fieldtype.props);
@@ -52,9 +58,9 @@ const handleKeyDown = (event) => {
     const direction = event.key === 'ArrowUp' ? 1 : -1;
 
     const normalized = normalizeToHourMinute(input.value, bounds);
-    const { hours, minutes } = stepDurationDigit(normalized, digitIndex, direction, bounds);
+    const stepped = stepDurationDigit(normalized, digitIndex, direction, bounds);
 
-    update(`${String(hours).padStart(2, '0')}${String(minutes).padStart(2, '0')}`);
+    update(toCanonicalValue(stepped));
 
     requestAnimationFrame(() => {
         if (document.activeElement === input) {
@@ -62,8 +68,25 @@ const handleKeyDown = (event) => {
         }
     });
 };
+
+// Paste replaces the whole value rather than inserting at the caret: unlike
+// currency's decimal-position-aware editing, duration has no digit grouping
+// or decimal point to reason about, so pasted digits are just parsed and
+// clamped the same way any other input is (via normalizeToHourMinute) and
+// used to replace the field outright.
+const handlePaste = (event) => {
+    event.preventDefault();
+
+    const pastedDigits = sanitizeDigits(event.clipboardData?.getData('text') ?? '');
+
+    if (!pastedDigits) {
+        return;
+    }
+
+    update(toCanonicalValue(normalizeToHourMinute(pastedDigits, bounds)));
+};
 </script>
 
 <template>
-    <Input v-maska="options" :model-value="value" @keydown="handleKeyDown" />
+    <Input v-maska="options" :model-value="value" @keydown="handleKeyDown" @paste="handlePaste" />
 </template>
