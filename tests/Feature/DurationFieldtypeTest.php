@@ -1,12 +1,52 @@
 <?php
 
+/**
+ * All four label keys filled in with their English defaults, with any given
+ * overrides applied on top. Used to build a "complete" label configuration
+ * without repeating all four keys in every test.
+ */
+function configuredLabels(array $overrides = []): array
+{
+    return array_merge([
+        'hourLabel' => 'hr',
+        'hourLabelPlural' => 'hrs',
+        'minuteLabel' => 'min',
+        'minuteLabelPlural' => 'mins',
+    ], $overrides);
+}
+
 describe('preload method: supplies metadata required by the Vue fieldtype component', function () {
     it('preloads max hour metadata for the Vue component', function () {
         $preload = $this->fieldtype->preload();
 
         expect($preload)
             ->toBeArray()
-            ->and($preload['maxHours'])->toBe(99);
+            ->and($preload['maxHours'])->toBe(99)
+            ->and($preload['maxMinutes'])->toBe(59);
+    });
+
+    it('preloads a configured maxHours value', function () {
+        $fieldtype = $this->fieldtypeWithConfig(['maxHours' => 5]);
+
+        expect($fieldtype->preload()['maxHours'])->toBe(5);
+    });
+
+    it('clamps a configured maxHours above 99 down to 99', function () {
+        $fieldtype = $this->fieldtypeWithConfig(['maxHours' => 150]);
+
+        expect($fieldtype->preload()['maxHours'])->toBe(99);
+    });
+
+    it('clamps a configured maxHours below 0 up to 0', function () {
+        $fieldtype = $this->fieldtypeWithConfig(['maxHours' => -10]);
+
+        expect($fieldtype->preload()['maxHours'])->toBe(0);
+    });
+
+    it('falls back to 99 for a non-numeric maxHours config', function () {
+        $fieldtype = $this->fieldtypeWithConfig(['maxHours' => 'not-a-number']);
+
+        expect($fieldtype->preload()['maxHours'])->toBe(99);
     });
 });
 
@@ -58,19 +98,142 @@ describe('process method: transforms hh:mm input into milliseconds', function ()
     });
 });
 
-describe('augment method: transforms stored milliseconds for Antlers template output', function () {
-    it('shows only mins when hours is zero', function () {
-        expect($this->fieldtype->augment(null))->toBe('00 mins')
-            ->and($this->fieldtype->augment(60_000))->toBe('01 min');
+describe('configured maxHours: caps parsing and formatting at the configured limit instead of 99', function () {
+    it('clamps process() input to the configured max hours', function () {
+        $fieldtype = $this->fieldtypeWithConfig(['maxHours' => 5]);
+
+        expect($fieldtype->process('0930'))->toBe(21_540_000);
     });
 
-    it('shows only hrs when minutes is zero', function () {
-        expect($this->fieldtype->augment(3_600_000))->toBe('01 hr')
-            ->and($this->fieldtype->augment(7_200_000))->toBe('02 hrs');
+    it('clamps preProcess() output to the configured max hours', function () {
+        $fieldtype = $this->fieldtypeWithConfig(['maxHours' => 5]);
+
+        expect($fieldtype->preProcess(900_000_000))->toBe('05:59');
     });
 
-    it('shows both hrs and mins when both are non-zero', function () {
-        expect($this->fieldtype->augment(5_400_000))->toBe('01 hr 30 mins')
-            ->and($this->fieldtype->augment(7_260_000))->toBe('02 hrs 01 min');
+    it('clamps augment() output to the configured max hours', function () {
+        $fieldtype = $this->fieldtypeWithConfig(['maxHours' => 5]);
+
+        expect($fieldtype->augment(900_000_000))->toBe('05:59');
+    });
+});
+
+describe('augment method: defaults to plain hh:mm when no labels are configured', function () {
+    it('matches the Control Panel hh:mm display', function () {
+        expect($this->fieldtype->augment(5_400_000))->toBe('01:30');
+    });
+
+    it('returns 00:00 for null input', function () {
+        expect($this->fieldtype->augment(null))->toBe('00:00');
+    });
+
+    it('caps augmented output at the field maximum for large durations', function () {
+        expect($this->fieldtype->augment(900_000_000))->toBe('99:59');
+    });
+
+    it('treats all-blank label config the same as no labels configured at all', function () {
+        $fieldtype = $this->fieldtypeWithConfig([
+            'hourLabel' => '', 'hourLabelPlural' => '',
+            'minuteLabel' => '', 'minuteLabelPlural' => '',
+        ]);
+
+        expect($fieldtype->augment(5_400_000))->toBe('01:30');
+    });
+
+    it('falls back to plain hh:mm when only some labels are configured', function () {
+        $fieldtype = $this->fieldtypeWithConfig(['hourLabel' => 'hr', 'hourLabelPlural' => 'hrs']);
+
+        expect($fieldtype->augment(5_400_000))->toBe('01:30');
+    });
+
+    it('falls back to plain hh:mm when a single label is left blank', function () {
+        $fieldtype = $this->fieldtypeWithConfig(configuredLabels(['minuteLabelPlural' => '']));
+
+        expect($fieldtype->augment(5_400_000))->toBe('01:30');
+    });
+});
+
+describe('configured labels: switches augment() to human-readable output once all four are set', function () {
+    it('omits the hours segment when hours is zero', function () {
+        $fieldtype = $this->fieldtypeWithConfig(configuredLabels());
+
+        expect($fieldtype->augment(null))->toBe('00 mins')
+            ->and($fieldtype->augment(60_000))->toBe('01 min');
+    });
+
+    it('omits the minutes segment when minutes is zero', function () {
+        $fieldtype = $this->fieldtypeWithConfig(configuredLabels());
+
+        expect($fieldtype->augment(3_600_000))->toBe('01 hr')
+            ->and($fieldtype->augment(7_200_000))->toBe('02 hrs');
+    });
+
+    it('shows both segments when both are non-zero', function () {
+        $fieldtype = $this->fieldtypeWithConfig(configuredLabels());
+
+        expect($fieldtype->augment(5_400_000))->toBe('01 hr 30 mins')
+            ->and($fieldtype->augment(7_260_000))->toBe('02 hrs 01 min');
+    });
+
+    it('uses configured singular and plural hour labels', function () {
+        $fieldtype = $this->fieldtypeWithConfig(configuredLabels([
+            'hourLabel' => 'heure', 'hourLabelPlural' => 'heures',
+        ]));
+
+        expect($fieldtype->augment(3_600_000))->toBe('01 heure')
+            ->and($fieldtype->augment(7_200_000))->toBe('02 heures');
+    });
+
+    it('uses configured singular and plural minute labels', function () {
+        $fieldtype = $this->fieldtypeWithConfig(configuredLabels([
+            'minuteLabel' => 'minuto', 'minuteLabelPlural' => 'minutos',
+        ]));
+
+        expect($fieldtype->augment(60_000))->toBe('01 minuto')
+            ->and($fieldtype->augment(120_000))->toBe('02 minutos');
+    });
+
+    it('uses configured labels for both segments together', function () {
+        $fieldtype = $this->fieldtypeWithConfig([
+            'hourLabel' => 'Std', 'hourLabelPlural' => 'Std',
+            'minuteLabel' => 'Min', 'minuteLabelPlural' => 'Min',
+        ]);
+
+        expect($fieldtype->augment(5_400_000))->toBe('01 Std 30 Min');
+    });
+});
+
+describe('configured stripLeadingZero: controls whether augment() zero-pads numbers, only once all labels are configured', function () {
+    it('is void when no labels are configured, always producing plain zero-padded hh:mm', function () {
+        $fieldtype = $this->fieldtypeWithConfig(['stripLeadingZero' => true]);
+
+        expect($fieldtype->augment(3_600_000))->toBe('01:00')
+            ->and($fieldtype->augment(5_400_000))->toBe('01:30');
+    });
+
+    it('is void when only some labels are configured', function () {
+        $fieldtype = $this->fieldtypeWithConfig(['hourLabel' => 'hr', 'stripLeadingZero' => true]);
+
+        expect($fieldtype->augment(3_600_000))->toBe('01:00');
+    });
+
+    it('zero-pads numbers by default once all labels are configured', function () {
+        $fieldtype = $this->fieldtypeWithConfig(configuredLabels());
+
+        expect($fieldtype->augment(3_600_000))->toBe('01 hr')
+            ->and($fieldtype->augment(5_400_000))->toBe('01 hr 30 mins');
+    });
+
+    it('strips the leading zero from single-digit numbers when enabled alongside configured labels', function () {
+        $fieldtype = $this->fieldtypeWithConfig(configuredLabels(['stripLeadingZero' => true]));
+
+        expect($fieldtype->augment(3_600_000))->toBe('1 hr')
+            ->and($fieldtype->augment(5_400_000))->toBe('1 hr 30 mins');
+    });
+
+    it('leaves double-digit numbers unaffected when enabled', function () {
+        $fieldtype = $this->fieldtypeWithConfig(configuredLabels(['stripLeadingZero' => true]));
+
+        expect($fieldtype->augment(84_600_000))->toBe('23 hrs 30 mins');
     });
 });

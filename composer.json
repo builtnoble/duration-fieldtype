@@ -17,15 +17,22 @@
         }
     },
     "require": {
+        "php": "^8.3",
         "statamic/cms": "^6.0"
     },
     "require-dev": {
+        "larastan/larastan": "^3.9",
+        "laravel/pint": "^1.30",
         "orchestra/testbench": "^10.8",
         "pestphp/pest": "^4.6"
     },
     "scripts": {
         "test": "pest",
-        "test:feature": "pest --group=\"feature\""
+        "test:feature": "pest --group=\"feature\"",
+        "lint": "pint --test",
+        "format": "pint",
+        "analyse": "phpstan analyse",
+        "check": ["@lint", "@analyse", "@test"]
     },
     "config": {
         "allow-plugins": {
@@ -40,9 +47,7 @@
             "editions": ["free"]
         },
         "laravel": {
-            "providers": [
-                "Builtnoble\\DurationFieldtype\\ServiceProvider"
-            ]
+            "providers": ["Builtnoble\\DurationFieldtype\\ServiceProvider"]
         }
     },
     "minimum-stability": "dev",
