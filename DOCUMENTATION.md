@@ -2,9 +2,11 @@
 
 ## Configuration
 
-- **Max Hours** — the maximum number of hours the field allows, from `0` to `99` (default `99`). A value outside that range is clamped rather than rejected. Minutes are not configurable and always range `00`–`59`.
-- **Hour Label (Singular / Plural)** and **Minute Label (Singular / Plural)** — all blank by default. `augment()` only switches from plain `hh:mm` to a human-readable string once **all four** of these fields are filled in; leaving any one blank (including a config left over from before this option existed) keeps output as plain `hh:mm`. This is a deliberate all-or-nothing rule: configuring only the hour labels and leaving minutes blank would otherwise silently mix a custom hour word with an assumed English minute word, which defeats the point of localizing in the first place. This is a lightweight localization mechanism: rather than the addon bundling a translation for every language, a site can set these to whatever its own language needs (e.g. `heure`/`heures`), including setting the singular and plural fields to the same value for a language that doesn't distinguish them. It covers the common "different word/suffix for exactly one vs. more than one" pattern; it isn't a full pluralization engine, so languages with more than two plural forms aren't represented exactly.
-- **Strip Leading Zero** — off by default (`03 hrs`, `05 mins`), and hidden in the Control Panel until all four label fields above are filled in (it has nothing to act on before then). Enabling it removes the leading zero from single-digit numbers in the human-readable `augment()` output (`3 hrs`, `5 mins`); it has no effect on the Control Panel input either way.
+| Option | Description | Default |
+| --- | --- | --- |
+| **Max Hours** | The maximum number of hours the field allows, from `0` to `99`. Out-of-range values are clamped rather than rejected. Minutes aren't configurable and always range `00`–`59`. | `99` |
+| **Hour/Minute Label (Singular / Plural)** | Localizes `augment()`'s output into a human-readable string (e.g. `heure`/`heures`). All four fields must be set for this to take effect — leaving any one blank keeps output as plain `hh:mm`, since mixing a custom word with an assumed English one would defeat the point of localizing. | blank (plain `hh:mm` output) |
+| **Strip Leading Zero** | Removes the leading zero from single-digit numbers in the human-readable output (`3 hrs` instead of `03 hrs`). Hidden in the Control Panel, and has no effect, until all four labels above are set. | `false` |
 
 ## How It Works
 
@@ -27,63 +29,38 @@ This fieldtype uses the standard Statamic fieldtype lifecycle and maps each meth
 
 Values are stored as plain integers representing the duration in milliseconds. A value entered as `01:30` is saved as `5400000`. Empty input is normalized to `0` on save.
 
-### Display in templates
+### Display
 
-By default, augmenting a stored value for Antlers produces the same plain `hh:mm` string shown in the Control Panel:
-
-```antlers
-{{ input_name }}
-{{# Examples:
-    0        → 00:00
-    5400000  → 01:30
-    7320000  → 02:02
-#}}
-```
-
-Once all four Hour/Minute Label settings are configured, `augment()` instead produces a human-readable string with singular/plural labels, omitting whichever segment is zero:
+By default, augmenting a stored value produces the same plain `hh:mm` string shown in the Control Panel:
 
 ```antlers
 {{ input_name }}
-{{# Examples (Hour Label set to "hr"):
-    0        → 00 mins          (0 mins with Strip Leading Zero enabled)
-    60000    → 01 min           (1 min)
-    5400000  → 01 hr 30 mins    (1 hr 30 mins)
-    3600000  → 01 hr            (1 hr)
-    7200000  → 02 hrs           (2 hrs)
-    7320000  → 02 hrs 02 mins   (2 hrs 2 mins)
-#}}
+{{# Output: 01:30 #}}
 ```
 
-Both segments follow singular/plural rules independently. When hours is zero only the minutes segment is shown; when minutes is zero only the hours segment is shown.
+Once all four Hour/Minute Label settings are configured, it instead produces a human-readable string, omitting whichever segment is zero:
 
-### Input masking
+```antlers
+{{ input_name }}
+{{# Output: 01 hr 30 mins #}}
+```
 
-The CP field renders a masked text input using [Maska](https://beholdr.github.io/maska/). The unmasked canonical value (four digits, `hhmm`) is what gets sent to `process()` on save.
+Strip Leading Zero drops the `0` from single-digit numbers in that human-readable output (`1 hr 30 mins`).
 
-Typing a digit overwrites whichever slot (hours tens, hours ones, minutes tens, or minutes ones) the caret currently sits at and advances to the next slot, like a fixed-width segmented date/time input, rather than inserting the character into the raw text and re-deriving the value from the last 4 digits typed anywhere. A digit typed past the field's maximum is clamped to that maximum rather than accepted as-is (e.g. typing `9` into the hours ones digit with a Max Hours of `8` produces `08`, not `09`).
+### Input masking and editing
 
-### Keyboard stepping
+The CP field renders a masked text input using [Maska](https://beholdr.github.io/maska/). Typing a digit overwrites whichever slot (hours/minutes, tens/ones) the caret sits at and advances to the next, like a segmented date/time input, rather than re-deriving the value from the last 4 digits typed anywhere in the field. The `↑`/`↓` arrow keys similarly step whichever digit the caret sits immediately after. A value typed or stepped past the field's bounds is clamped rather than accepted as-is.
 
-With focus inside the duration field, the `↑` and `↓` arrow keys increment or decrement whichever single digit the cursor sits immediately after (hours tens, hours ones, minutes tens, or minutes ones), independently of the other digit in that pair. A caret with no digit right before it (the very start of the field, or just after the `:`) doesn't step anything.
-
-- `02:59` → caret right after the first digit → ↑ → `12:59` (only the hours tens digit changes)
-- `12:59` → caret right after the second digit → ↑ → `13:59` (only the hours ones digit changes)
-- `00:55` → caret right after the third digit → ↑ → `00:05` (incrementing past the field maximum restarts the digit at 0, rather than producing an invalid `00:65`)
-- `99:00` → caret right after the first digit → ↑ → `09:00` (a digit hitting its own maximum of 9 also restarts at 0)
-- `00:00` → caret right after any digit → ↓ → wraps to the digit's maximum instead of going negative
-
-### Pasting
-
-Pasting into the field replaces its entire value rather than inserting at the caret. Non-digit characters in the pasted text (spaces, colons, letters, etc.) are stripped before parsing, so pasting `1:30 PM` or `0130` both produce `01:30`. Only the last 4 digits of a longer paste are read, and the result is clamped to the field's bounds the same way typed input is.
+Pasting replaces the field's entire value: non-digit characters are stripped, only the last 4 digits are read, and the result is clamped the same way typed input is.
 
 ### Value bounds
 
-| Bound           | Value                                   |
-| --------------- | ---------------------------------------- |
-| Maximum display | `99:59` by default, or `{Max Hours}:59` |
-| Minimum display | `00:00`                                 |
-| Precision       | 1 minute (60,000 ms)                    |
+| Bound | Value |
+| --- | --- |
+| Maximum | `99:59` by default, or `{Max Hours}:59` |
+| Minimum | `00:00` |
+| Precision | 1 minute (60,000 ms) |
 
 ### Null and empty handling
 
-Both `preProcess` and `preProcessIndex` handle `null` defensively by returning `00:00`. `augment` returns `00:00` (or `00 mins`, once all labels are configured) for null or zero values so templates always receive a non-empty string.
+`preProcess` and `preProcessIndex` handle `null` by returning `00:00`. `augment` returns `00:00` (or `00 mins`, once labels are configured) for null or zero values.
